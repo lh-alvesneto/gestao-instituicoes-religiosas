@@ -12,7 +12,7 @@ Um sistema web centralizado (CRUD) onde os membros e colaboradores podem registr
 ## Tecnologias Utilizadas
 * Front-end: HTML5, CSS3, JavaScript
 * Back-end: Python com Framework Web (Flask/Django) e API REST
-* Banco de Dados: A definir (SQLite / MySQL)
+* Banco de Dados: SQLite
 * Controle de Versão: Git e GitHub
 * Deploy/Hospedagem: Heroku (Previsão)
 
