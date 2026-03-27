@@ -10,18 +10,18 @@ Atualmente, o controle de demandas da instituição é feito de maneira informal
 Um sistema web centralizado (CRUD) onde os membros e colaboradores podem registrar e acompanhar o status de solicitações de materiais (ex: canetas, suprimentos) e pedidos de manutenção (ex: reparos elétricos, remoção de pragas), eliminando o retrabalho e mantendo um histórico organizado.
 
 ## Tecnologias Utilizadas
-* Front-end: HTML5, CSS3, JavaScript
-* Back-end: Python com Framework Web (Flask/Django) e API REST
+* Front-end: HTML5, CSS3, JavaScript (Bootstrap 5)
+* Back-end: Python com Framework Web (Flask) e Jinja2 (Renderização no Servidor)
 * Banco de Dados: SQLite
 * Controle de Versão: Git e GitHub
 * Deploy/Hospedagem: Heroku (Previsão)
 
 ## Funcionalidades Principais (Em desenvolvimento)
 - [ ] Cadastro e autenticação de usuários
-- [ ] Formulário de solicitação de compras/materiais
-- [ ] Formulário de solicitação de manutenção
-- [ ] Painel de controle para visualização e alteração de status das demandas
-- [ ] Histórico de serviços concluídos
+- [x] Formulário de solicitação de compras/materiais
+- [x] Formulário de solicitação de manutenção
+- [x] Painel de controle para visualização e alteração de status das demandas
+- [x] Histórico de serviços concluídos
 
 ## Equipe
 * Anderson Aparecido de Almeida
