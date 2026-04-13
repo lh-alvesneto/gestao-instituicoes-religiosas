@@ -200,7 +200,7 @@ def atualizar_status_material(id, novo_status):
         return redirect(url_for('materiais'))
 
     solicitacao = SolicitacaoMaterial.query.get_or_404(id)
-    status_validos = ['pendente', 'aprovado', 'entregue']
+    status_validos = ['pendente', 'aprovado', 'entregue', 'cancelado']
     if novo_status in status_validos:
         solicitacao.status = novo_status
         db.session.commit()
@@ -258,7 +258,7 @@ def atualizar_status_manutencao(id, novo_status):
         return redirect(url_for('manutencao'))
 
     chamado = SolicitacaoManutencao.query.get_or_404(id)
-    status_validos = ['aberto', 'em_andamento', 'concluido']
+    status_validos = ['aberto', 'em_andamento', 'concluido', 'cancelado']
     if novo_status in status_validos:
         chamado.status = novo_status
         db.session.commit()
@@ -268,7 +268,34 @@ def atualizar_status_manutencao(id, novo_status):
 
     return redirect(url_for('manutencao'))
 
+@app.route('/materiais/deletar/<int:id>')
+@login_required
+def deletar_material(id):
+    usuario = get_usuario_logado()
+    if usuario.perfil != 'admin':
+        flash('Acesso negado.', 'danger')
+        return redirect(url_for('materiais'))
 
+    item = SolicitacaoMaterial.query.get_or_404(id)
+    db.session.delete(item)
+    db.session.commit()
+    flash('Solicitação apagada permanentemente do sistema.', 'success')
+    return redirect(url_for('materiais'))
+
+@app.route('/manutencao/deletar/<int:id>')
+@login_required
+def deletar_manutencao(id):
+    usuario = get_usuario_logado()
+    if usuario.perfil != 'admin':
+        flash('Acesso negado.', 'danger')
+        return redirect(url_for('manutencao'))
+
+    chamado = SolicitacaoManutencao.query.get_or_404(id)
+    db.session.delete(chamado)
+    db.session.commit()
+    flash('Chamado apagado permanentemente do sistema.', 'success')
+    return redirect(url_for('manutencao'))
+    
 # ---------------------------------------------------------------------------
 # Histórico
 # ---------------------------------------------------------------------------
@@ -295,9 +322,83 @@ def historico():
                            materiais_entregues=materiais_entregues,
                            manutencoes_concluidas=manutencoes_concluidas)
 
+# ---------------------------------------------------------------------------
+# Gestão de Usuários (Apenas Admin)
+# ---------------------------------------------------------------------------
+@app.route('/usuarios/cadastrar', methods=['GET', 'POST'])
+@login_required
+def cadastrar_usuario():
+    usuario_logado = get_usuario_logado()
+    if usuario_logado.perfil != 'admin':
+        flash('Acesso negado.', 'danger')
+        return redirect(url_for('dashboard'))
 
+    if request.method == 'POST':
+        nome = request.form.get('nome').strip()
+        email = request.form.get('email').strip().lower()
+        senha = request.form.get('senha')
+        perfil = request.form.get('perfil')
+
+        # Verifica se email já existe
+        existente = Usuario.query.filter_by(email=email).first()
+        if existente:
+            flash('Este e-mail já está cadastrado.', 'warning')
+        else:
+            novo = Usuario(nome=nome, email=email, senha=senha, perfil=perfil)
+            db.session.add(novo)
+            db.session.commit()
+            flash(f'Usuário {nome} cadastrado com sucesso!', 'success')
+            return redirect(url_for('dashboard'))
+
+    return render_template('cadastro.html', usuario=usuario_logado)
+
+# ---------------------------------------------------------------------------
+# Edição de Demandas
+# ---------------------------------------------------------------------------
+@app.route('/materiais/editar/<int:id>', methods=['GET', 'POST'])
+@login_required
+def editar_material(id):
+    usuario = get_usuario_logado()
+    item = SolicitacaoMaterial.query.get_or_404(id)
+    
+    # Só o dono ou admin pode editar
+    if usuario.perfil != 'admin' and item.id_usuario != usuario.id:
+        flash('Você não tem permissão para editar este item.', 'danger')
+        return redirect(url_for('materiais'))
+
+    if request.method == 'POST':
+        item.nome_material = request.form.get('nome_material')
+        item.quantidade = int(request.form.get('quantidade'))
+        item.justificativa = request.form.get('justificativa')
+        db.session.commit()
+        flash('Alterações salvas com sucesso!', 'success')
+        return redirect(url_for('materiais'))
+
+    return render_template('editar_material.html', item=item, usuario=usuario)
+
+@app.route('/manutencao/editar/<int:id>', methods=['GET', 'POST'])
+@login_required
+def editar_manutencao(id):
+    usuario = get_usuario_logado()
+    chamado = SolicitacaoManutencao.query.get_or_404(id)
+
+    if usuario.perfil != 'admin' and chamado.id_usuario != usuario.id:
+        flash('Sem permissão para editar.', 'danger')
+        return redirect(url_for('manutencao'))
+
+    if request.method == 'POST':
+        chamado.local = request.form.get('local')
+        chamado.urgencia = request.form.get('urgencia')
+        chamado.descricao_problema = request.form.get('descricao_problema')
+        db.session.commit()
+        flash('Chamado atualizado!', 'success')
+        return redirect(url_for('manutencao'))
+
+    return render_template('editar_manutencao.html', chamado=chamado, usuario=usuario)
+    
 # ---------------------------------------------------------------------------
 # Ponto de Entrada
 # ---------------------------------------------------------------------------
 if __name__ == '__main__':
     app.run(debug=True)
+
