@@ -60,6 +60,7 @@ Este método configura todo o ambiente necessário sem exigir conhecimento técn
 ## Credenciais de Acesso (Testes):
 
 Admin: admin@igreja.com | Senha: admin
+
 Usuário: user@igreja.com | Senha: 123
 
 ## Equipe
