@@ -17,7 +17,7 @@ Um sistema web centralizado (CRUD) onde os membros e colaboradores podem registr
 * **Controle de Versão:** Git e GitHub
 
 ## Funcionalidades Principais (Em desenvolvimento)
-- [ ] Cadastro e autenticação de usuários
+- [x] Cadastro e autenticação de usuários
 - [x] Formulário de solicitação de compras/materiais
 - [x] Formulário de solicitação de manutenção
 - [x] Painel de controle para visualização e alteração de status das demandas
