@@ -1,0 +1,167 @@
+{% extends "base.html" %}
+{% block title %}Chamado #{{ chamado.id }} — SGD{% endblock %}
+{% block page_icon %}tools{% endblock %}
+{% block page_title %}Chamado de Manutenção #{{ chamado.id }}{% endblock %}
+
+{% block content %}
+<div class="row g-4">
+
+  <!-- Detalhes + Imagens -->
+  <div class="col-lg-7">
+
+    <div class="card-corp mb-3">
+      <div class="card-header-corp">
+        <h6><i class="bi bi-info-circle me-2 opacity-50"></i>Informações do Chamado</h6>
+        <div class="d-flex gap-2 align-items-center">
+          <span class="urgencia-{{ chamado.urgencia }}">{{ chamado.urgencia | capitalize }}</span>
+          <span class="status-pill status-{{ chamado.status }}">{{ chamado.status | replace('_', ' ') }}</span>
+        </div>
+      </div>
+      <div class="card-body-corp">
+        <dl class="row mb-0" style="font-size:.83rem;row-gap:10px;">
+          <dt class="col-sm-4" style="color:#9ca3af;font-weight:500;">Local</dt>
+          <dd class="col-sm-8 fw-semibold mb-0">{{ chamado.local }}</dd>
+
+          <dt class="col-sm-4" style="color:#9ca3af;font-weight:500;">Descrição</dt>
+          <dd class="col-sm-8 mb-0">{{ chamado.descricao }}</dd>
+
+          <dt class="col-sm-4" style="color:#9ca3af;font-weight:500;">Urgência</dt>
+          <dd class="col-sm-8 mb-0">
+            <span class="urgencia-{{ chamado.urgencia }}">{{ chamado.urgencia | capitalize }}</span>
+          </dd>
+
+          <dt class="col-sm-4" style="color:#9ca3af;font-weight:500;">Solicitante</dt>
+          <dd class="col-sm-8 mb-0">{{ chamado.solicitante.nome }}</dd>
+
+          <dt class="col-sm-4" style="color:#9ca3af;font-weight:500;">Aberto em</dt>
+          <dd class="col-sm-8 mb-0">{{ chamado.data_criacao.strftime('%d/%m/%Y às %H:%M') }}</dd>
+
+          {% if chamado.responsavel %}
+          <dt class="col-sm-4" style="color:#9ca3af;font-weight:500;">Responsável</dt>
+          <dd class="col-sm-8 mb-0">{{ chamado.responsavel.nome }}</dd>
+          {% endif %}
+        </dl>
+      </div>
+    </div>
+
+    <!-- Imagens Anexadas -->
+    {% if anexos %}
+    <div class="card-corp mb-3">
+      <div class="card-header-corp">
+        <h6><i class="bi bi-images me-2 opacity-50"></i>Imagens Anexadas</h6>
+        <span style="font-size:.72rem;color:#9ca3af;">{{ anexos | length }}/3</span>
+      </div>
+      <div class="card-body-corp">
+        <div class="d-flex flex-wrap gap-3">
+          {% for a in anexos %}
+          <div style="position:relative;">
+            <a href="{{ url_for('serve_upload', filename=a.caminho_arquivo) }}"
+               target="_blank" rel="noopener noreferrer"
+               title="Abrir: {{ a.nome_original or a.caminho_arquivo }}">
+              <img src="{{ url_for('serve_upload', filename=a.caminho_arquivo) }}"
+                   alt="{{ a.nome_original or 'Imagem' }}"
+                   loading="lazy"
+                   style="width:120px; height:90px; object-fit:cover;
+                          border-radius:6px; border:2px solid #e2e8f0;
+                          display:block; transition:border-color .15s;"
+                   onmouseover="this.style.borderColor='#1d5fa6'"
+                   onmouseout="this.style.borderColor='#e2e8f0'"
+                   onerror="this.style.display='none';
+                            this.nextElementSibling.style.display='flex';" />
+              <!-- Fallback se a imagem não carregar -->
+              <div style="display:none; width:120px; height:90px;
+                          background:#f0f2f5; border-radius:6px;
+                          border:2px dashed #d1d5db;
+                          align-items:center; justify-content:center;
+                          flex-direction:column; color:#9ca3af; font-size:.7rem; gap:4px;">
+                <i class="bi bi-image" style="font-size:1.5rem;"></i>
+                Indisponível
+              </div>
+            </a>
+            <div style="font-size:.65rem; color:#9ca3af; margin-top:4px;
+                        max-width:120px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;"
+                 title="{{ a.nome_original }}">
+              {{ a.nome_original or a.caminho_arquivo }}
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+    {% endif %}
+
+    <!-- Ações -->
+    {% if chamado.status == 'em_andamento' %}
+    <div style="padding:10px 14px;background:#fffbeb;border:1px solid #fde68a;
+                border-radius:6px;font-size:.8rem;color:#92400e;margin-bottom:12px;">
+      <i class="bi bi-lock me-2"></i>
+      Chamado em andamento — edição bloqueada. Use comentários para adicionar informações.
+    </div>
+    {% endif %}
+
+    <div class="d-flex gap-2 flex-wrap">
+      {% if (current_user.is_usuario and chamado.id_usuario == current_user.id and chamado.status == 'aberto')
+         or current_user.pode_gerenciar %}
+        {% if chamado.status != 'em_andamento' %}
+        <a href="{{ url_for('editar_chamado', cid=chamado.id) }}" class="btn-corp-primary"
+           style="font-size:.8rem;">
+          <i class="bi bi-pencil me-1"></i>Editar
+        </a>
+        {% endif %}
+      {% endif %}
+      <a href="{{ url_for('manutencao') }}"
+         style="padding:7px 14px;border:1px solid #d1d5db;border-radius:6px;
+                font-size:.8rem;font-weight:500;text-decoration:none;color:#374151;background:#fff;">
+        <i class="bi bi-arrow-left me-1"></i>Voltar
+      </a>
+    </div>
+
+  </div>
+
+  <!-- Comentários -->
+  <div class="col-lg-5">
+    <div class="card-corp">
+      <div class="card-header-corp">
+        <h6><i class="bi bi-chat-left-dots me-2 opacity-50"></i>Comentários</h6>
+        <span style="font-size:.72rem;color:#9ca3af;">{{ comentarios | length }}</span>
+      </div>
+      <div style="max-height:320px;overflow-y:auto;padding:14px 16px;display:flex;flex-direction:column;gap:10px;">
+        {% for c in comentarios %}
+        <div style="padding:10px 12px;background:#f8fafc;border-radius:6px;
+                    border-left:3px solid {% if c.id_usuario == chamado.id_usuario %}#1d5fa6{% else %}#16a34a{% endif %};">
+          <div style="font-size:.72rem;color:#9ca3af;margin-bottom:4px;">
+            <strong style="color:#374151;">{{ c.autor.nome.split()[0] }}</strong>
+            <span style="color:#d1d5db;margin:0 4px;">·</span>
+            <span style="font-size:.68rem;
+              background:{% if c.autor.perfil == 'administrador' %}#fee2e2;color:#c0392b;
+              {% elif c.autor.perfil == 'gestor' %}#fef3c7;color:#b45309;
+              {% else %}#dbeafe;color:#1e4d8c;{% endif %}
+              padding:1px 6px;border-radius:4px;">
+              {{ c.autor.perfil | capitalize }}
+            </span>
+            <span style="color:#d1d5db;margin:0 4px;">·</span>
+            {{ c.data_hora.strftime('%d/%m %H:%M') }}
+          </div>
+          <div style="font-size:.82rem;color:#374151;">{{ c.texto }}</div>
+        </div>
+        {% else %}
+        <div class="empty-state" style="padding:24px 0;">
+          <i class="bi bi-chat-left"></i>
+          <p>Sem comentários ainda.</p>
+        </div>
+        {% endfor %}
+      </div>
+      <div style="border-top:1px solid #f0f2f5;padding:14px 16px;">
+        <form method="POST" action="{{ url_for('comentar_chamado', cid=chamado.id) }}">
+          <textarea name="texto" class="form-control form-control-corp mb-2"
+                    rows="2" placeholder="Adicione um comentário ou atualização..."></textarea>
+          <button type="submit" class="btn-corp-primary" style="font-size:.78rem;padding:5px 14px;">
+            <i class="bi bi-send me-1"></i>Comentar
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+</div>
+{% endblock %}

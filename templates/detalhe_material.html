@@ -1,0 +1,97 @@
+{% extends "base.html" %}
+{% block title %}Material #{{ sol.id }} — SGD{% endblock %}
+{% block page_icon %}box-seam{% endblock %}
+{% block page_title %}Detalhe da Solicitação #{{ sol.id }}{% endblock %}
+
+{% block content %}
+<div class="row g-4">
+
+  <!-- Detalhes -->
+  <div class="col-lg-7">
+    <div class="card-corp mb-3">
+      <div class="card-header-corp">
+        <h6><i class="bi bi-info-circle me-2 opacity-50"></i>Informações da Solicitação</h6>
+        <span class="status-pill status-{{ sol.status }}">{{ sol.status }}</span>
+      </div>
+      <div class="card-body-corp">
+        <dl class="row mb-0" style="font-size:.83rem;row-gap:10px;">
+          <dt class="col-sm-4" style="color:#9ca3af;font-weight:500;">Material</dt>
+          <dd class="col-sm-8 fw-semibold mb-0">{{ sol.nome_material }}</dd>
+
+          <dt class="col-sm-4" style="color:#9ca3af;font-weight:500;">Quantidade</dt>
+          <dd class="col-sm-8 mb-0">{{ sol.quantidade }} unidade(s)</dd>
+
+          <dt class="col-sm-4" style="color:#9ca3af;font-weight:500;">Justificativa</dt>
+          <dd class="col-sm-8 mb-0">{{ sol.justificativa }}</dd>
+
+          <dt class="col-sm-4" style="color:#9ca3af;font-weight:500;">Solicitante</dt>
+          <dd class="col-sm-8 mb-0">{{ sol.solicitante.nome }}</dd>
+
+          <dt class="col-sm-4" style="color:#9ca3af;font-weight:500;">Criado em</dt>
+          <dd class="col-sm-8 mb-0">{{ sol.data_criacao.strftime('%d/%m/%Y às %H:%M') }}</dd>
+
+          {% if sol.responsavel %}
+          <dt class="col-sm-4" style="color:#9ca3af;font-weight:500;">Responsável</dt>
+          <dd class="col-sm-8 mb-0">{{ sol.responsavel.nome }}</dd>
+          {% endif %}
+        </dl>
+      </div>
+    </div>
+
+    <!-- Ações -->
+    <div class="d-flex gap-2 flex-wrap">
+      {% if (current_user.is_usuario and sol.id_usuario == current_user.id and sol.status == 'pendente')
+         or current_user.pode_gerenciar %}
+        {% if sol.status != 'em_andamento' %}
+        <a href="{{ url_for('editar_material', mid=sol.id) }}" class="btn-corp-primary"
+           style="font-size:.8rem;">
+          <i class="bi bi-pencil me-1"></i>Editar
+        </a>
+        {% endif %}
+      {% endif %}
+      <a href="{{ url_for('materiais') }}"
+         style="padding:7px 14px;border:1px solid #d1d5db;border-radius:6px;
+                font-size:.8rem;font-weight:500;text-decoration:none;color:#374151;background:#fff;">
+        <i class="bi bi-arrow-left me-1"></i>Voltar
+      </a>
+    </div>
+  </div>
+
+  <!-- Comentários -->
+  <div class="col-lg-5">
+    <div class="card-corp">
+      <div class="card-header-corp">
+        <h6><i class="bi bi-chat-left-dots me-2 opacity-50"></i>Comentários</h6>
+        <span style="font-size:.72rem;color:#9ca3af;">{{ comentarios | length }} comentário(s)</span>
+      </div>
+      <div style="max-height:300px;overflow-y:auto;padding:14px 16px;display:flex;flex-direction:column;gap:10px;">
+        {% for c in comentarios %}
+        <div style="padding:10px 12px;background:#f8fafc;border-radius:6px;
+                    border-left:3px solid #1d5fa6;">
+          <div style="font-size:.72rem;color:#9ca3af;margin-bottom:4px;">
+            <strong style="color:#374151;">{{ c.autor.nome.split()[0] }}</strong>
+            · {{ c.data_hora.strftime('%d/%m/%Y %H:%M') }}
+          </div>
+          <div style="font-size:.82rem;color:#374151;">{{ c.texto }}</div>
+        </div>
+        {% else %}
+        <div class="empty-state" style="padding:24px 0;">
+          <i class="bi bi-chat-left"></i>
+          <p>Sem comentários ainda.</p>
+        </div>
+        {% endfor %}
+      </div>
+      <div style="border-top:1px solid #f0f2f5;padding:14px 16px;">
+        <form method="POST" action="{{ url_for('comentar_material', mid=sol.id) }}">
+          <textarea name="texto" class="form-control form-control-corp mb-2"
+                    rows="2" placeholder="Adicione um comentário..."></textarea>
+          <button type="submit" class="btn-corp-primary" style="font-size:.78rem;padding:5px 14px;">
+            <i class="bi bi-send me-1"></i>Comentar
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+</div>
+{% endblock %}

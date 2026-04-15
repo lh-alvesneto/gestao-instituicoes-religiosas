@@ -1,0 +1,161 @@
+{% extends "base.html" %}
+
+{% block title %}Usuários — IPVP{% endblock %}
+
+{% block content %}
+<div class="container-fluid p-0">
+
+  <div class="d-flex justify-content-between align-items-end mb-4 border-bottom pb-3">
+    <div>
+      <h1 class="h3 mb-1" style="font-weight: 800; color: var(--sgd-navy);">
+        <i class="bi bi-people me-2" style="color: var(--sgd-blue);"></i>Gestão de Usuários
+      </h1>
+      <p class="text-muted mb-0" style="font-size: 0.9rem;">Todos os usuários ativos no sistema.</p>
+    </div>
+    
+    <div>
+      <a href="{{ url_for('novo_usuario') }}" class="btn-corp-primary">
+        <i class="bi bi-plus-lg me-1"></i> Novo Usuário
+      </a>
+    </div>
+  </div>
+
+  <div class="card-corp">
+    <div class="table-responsive" style="overflow-x: auto;">
+      <table class="table-corp">
+        <thead>
+          <tr>
+            <th style="width: 35%;">Nome do Usuário</th>
+            <th>E-mail</th>
+            <th style="width: 140px; text-align: center;">Perfil</th>
+            <th>Data de Criação</th>
+            <th style="width: 120px; text-align: center;">Ações</th> 
+          </tr>
+        </thead>
+        <tbody>
+          {% for u in usuarios %}
+          <tr style="vertical-align: middle;">
+            
+            <td>
+              <div class="d-flex align-items-center gap-3">
+                <div class="rounded-circle d-flex align-items-center justify-content-center fw-bold"
+                     style="width: 36px; height: 36px; background-color: var(--sgd-bg); color: var(--sgd-blue); font-size: 0.9rem;">
+                  {{ u.nome[0]|upper }}
+                </div>
+                <div>
+                  <span class="d-block fw-bold text-capitalize" style="color: var(--sgd-navy);">
+                    {{ u.nome }}
+                  </span>
+                  {% if u.criado_por %}
+                  <span style="font-size: 0.7rem; color: #9ca3af;">Criado por: {{ u.criado_por.nome.split()[0] }}</span>
+                  {% endif %}
+                </div>
+              </div>
+            </td>
+            
+            <td style="color: #4b5563; font-size: 0.85rem;">{{ u.email }}</td>
+            
+            <td style="text-align: center;">
+              {% if u.perfil == 'administrador' %}
+                <span class="badge-perfil" style="background: var(--sgd-navy); color: white; border: 1px solid rgba(255,255,255,0.1);">Admin</span>
+              {% elif u.perfil == 'gestor' %}
+                <span class="badge-perfil gestor">Gestor</span>
+              {% else %}
+                <span class="badge-perfil usuario">Usuário</span>
+              {% endif %}
+            </td>
+            
+            <td style="font-size: 0.85rem; color: #6b7280;">{{ u.data_criacao.strftime('%d/%m/%Y') }}</td>
+            
+            <td style="text-align: center;">
+              {% if u.id == current_user.id %}
+                <span style="color: #d1d5db; font-size: 0.8rem; font-weight: 500;">Você</span>
+              {% elif current_user.is_admin or (current_user.is_gestor and u.criado_por_id == current_user.id) %}
+                <button type="button" class="btn btn-link p-0 btn-delete-user" 
+                        data-bs-toggle="modal" 
+                        data-bs-target="#modalExcluir" 
+                        data-uid="{{ u.id }}" 
+                        data-unome="{{ u.nome }}"
+                        title="Excluir Usuário">
+                  <i class="bi bi-trash"></i>
+                </button>
+              {% else %}
+                <span style="color: #d1d5db; font-size: 0.8rem;">—</span>
+              {% endif %}
+            </td>
+
+          </tr>
+          {% else %}
+          <tr>
+            <td colspan="5">
+              <div class="empty-state">
+                <i class="bi bi-people"></i>
+                <p>Nenhum usuário ativo encontrado.</p>
+              </div>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+</div>
+
+<div class="modal fade" id="modalExcluir" tabindex="-1" aria-labelledby="modalExcluirLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content" style="border-radius: 12px; border: none; box-shadow: 0 10px 30px rgba(0,0,0,0.1);">
+      <div class="modal-header border-0 pb-0">
+        <h5 class="modal-title fw-bold" id="modalExcluirLabel" style="color: var(--sgd-navy);">Confirmar Exclusão</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+      </div>
+      <div class="modal-body text-secondary" style="font-size: 0.95rem;">
+        Tem certeza que deseja excluir o usuário <strong id="modalUserName" class="text-dark"></strong> permanentemente? 
+        <br><br>
+        Esta ação não pode ser desfeita.
+      </div>
+      <div class="modal-footer border-0 pt-0">
+        <button type="button" class="btn btn-light" data-bs-dismiss="modal" style="font-weight: 600; font-size: 0.85rem;">Cancelar</button>
+        <form id="deleteUserForm" method="POST" action="">
+          <button type="submit" class="btn btn-danger" style="font-weight: 600; font-size: 0.85rem; border-radius: 6px;">Excluir</button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+<style>
+  /* Efeito suave e sem bordas para o ícone de lixeira */
+  .btn-delete-user {
+    color: #9ca3af; 
+    transition: color 0.2s ease, transform 0.2s ease;
+    font-size: 1.1rem;
+    text-decoration: none;
+  }
+  
+  .btn-delete-user:hover {
+    color: #dc2626; 
+    transform: scale(1.1); 
+  }
+</style>
+
+<script>
+  // Mágica do Modal: Captura os dados do botão clicado e joga para dentro do Modal
+  document.addEventListener('DOMContentLoaded', function () {
+    var modalExcluir = document.getElementById('modalExcluir');
+    if (modalExcluir) {
+      modalExcluir.addEventListener('show.bs.modal', function (event) {
+        var button = event.relatedTarget;
+        
+        // Pega as variáveis passadas no HTML
+        var uid = button.getAttribute('data-uid');
+        var unome = button.getAttribute('data-unome');
+        
+        // Altera o texto e o formulário do modal
+        modalExcluir.querySelector('#modalUserName').textContent = unome;
+        modalExcluir.querySelector('#deleteUserForm').action = '/usuarios/' + uid + '/inativar';
+      });
+    }
+  });
+</script>
+{% endblock %}
