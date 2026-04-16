@@ -1,148 +1,115 @@
 {% extends "base.html" %}
-{% block title %}Painel — SGD{% endblock %}
-{% block page_icon %}speedometer2{% endblock %}
-{% block page_title %}Painel de Controle{% endblock %}
+
+{% block title %}Dashboard — IPVP{% endblock %}
 
 {% block content %}
+<div class="container-fluid p-0">
 
-{# =========================================================
-   VISÃO DO ADMINISTRADOR / GESTOR
-========================================================= #}
-{% if current_user.pode_gerenciar %}
+  <div class="d-flex justify-content-between align-items-end mb-4 pb-2">
+    <div>
+      <h1 class="h3 mb-1" style="font-weight: 800; color: var(--sgd-navy);">
+        <i class="bi bi-grid-1x2 me-2" style="color: var(--sgd-blue);"></i>Painel de Controle
+      </h1>
+      <p class="text-muted mb-0" style="font-size: 0.9rem;">Visão geral das demandas e chamados ativos.</p>
+    </div>
+  </div>
 
-  <!-- KPI Row -->
-  <div class="kpi-unified-container">
+  {% if current_user.pode_gerenciar %}
+  
+  <div class="kpi-grid mb-4">
     
-    <div class="kpi-item">
-      <div class="kpi-icon-small" style="background:#fef9c3; color:#ca8a04;"><i class="bi bi-hourglass-split"></i></div>
+    <div class="kpi-card">
+      <div class="kpi-icon" style="background-color: rgba(217, 119, 6, 0.1); color: #d97706;"><i class="bi bi-box-seam"></i></div>
       <div>
-        <span class="kpi-value-small">{{ kpi.mat_pendente }}</span>
-        <span class="kpi-label-small">Mat. Pendentes</span>
-      </div>
-    </div>
-    
-    <div class="kpi-divider"></div>
-
-    <div class="kpi-item">
-      <div class="kpi-icon-small" style="background:#dcfce7; color:#16a34a;"><i class="bi bi-check2-circle"></i></div>
-      <div>
-        <span class="kpi-value-small">{{ kpi.mat_aprovado }}</span>
-        <span class="kpi-label-small">Mat. Aprovados</span>
+        <div class="kpi-value" style="color: #d97706;">{{ kpi.mat_pendente }}</div>
+        <div class="kpi-label">Aguardando Aprovação</div>
       </div>
     </div>
 
-    <div class="kpi-divider"></div>
-
-    <div class="kpi-item">
-      <div class="kpi-icon-small" style="background:#fee2e2; color:#dc2626;"><i class="bi bi-tools"></i></div>
+    <div class="kpi-card">
+      <div class="kpi-icon" style="background-color: rgba(220, 38, 38, 0.1); color: #dc2626;"><i class="bi bi-tools"></i></div>
       <div>
-        <span class="kpi-value-small">{{ kpi.man_aberto }}</span>
-        <span class="kpi-label-small">Chamados Abertos</span>
+        <div class="kpi-value" style="color: #dc2626;">{{ kpi.man_aberto }}</div>
+        <div class="kpi-label">Chamados Abertos</div>
       </div>
     </div>
 
-    <div class="kpi-divider"></div>
-
-    <div class="kpi-item">
-      <div class="kpi-icon-small" style="background:#fef3c7; color:#d97706;"><i class="bi bi-arrow-repeat"></i></div>
+    <div class="kpi-card border-danger-subtle" style="border-width: 2px;">
+      <div class="kpi-icon" style="background-color: rgba(225, 29, 72, 0.1); color: #e11d48;"><i class="bi bi-exclamation-octagon"></i></div>
       <div>
-        <span class="kpi-value-small">{{ kpi.man_andamento }}</span>
-        <span class="kpi-label-small">Em Andamento</span>
+        <div class="kpi-value" style="color: #e11d48;">{{ kpi.man_alta }}</div>
+        <div class="kpi-label text-danger">Alta Urgência</div>
       </div>
     </div>
 
-    <div class="kpi-divider"></div>
-
-    <div class="kpi-item">
-      <div class="kpi-icon-small" style="background:#ffe4e6; color:#e11d48;"><i class="bi bi-exclamation-octagon"></i></div>
+    <div class="kpi-card">
+      <div class="kpi-icon" style="background-color: rgba(14, 165, 233, 0.1); color: #0ea5e9;"><i class="bi bi-arrow-repeat"></i></div>
       <div>
-        <span class="kpi-value-small">{{ kpi.man_alta }}</span>
-        <span class="kpi-label-small">Alta Urgência</span>
+        <div class="kpi-value" style="color: #0ea5e9;">{{ kpi.man_andamento }}</div>
+        <div class="kpi-label">Em Andamento</div>
       </div>
     </div>
 
-    <div class="kpi-divider"></div>
-
-    <div class="kpi-item">
-      <div class="kpi-icon-small" style="background:#ede9fe; color:#7c3aed;"><i class="bi bi-people"></i></div>
+    <div class="kpi-card">
+      <div class="kpi-icon" style="background-color: rgba(16, 185, 129, 0.1); color: #10b981;"><i class="bi bi-truck"></i></div>
       <div>
-        <span class="kpi-value-small">{{ kpi.total_usuarios }}</span>
-        <span class="kpi-label-small">Usuários Ativos</span>
+        <div class="kpi-value" style="color: #10b981;">{{ kpi.mat_aprovado }}</div>
+        <div class="kpi-label">Aprovados / Compras</div>
+      </div>
+    </div>
+
+    <div class="kpi-card">
+      <div class="kpi-icon" style="background-color: rgba(124, 58, 237, 0.1); color: #7c3aed;"><i class="bi bi-check2-all"></i></div>
+      <div>
+        <div class="kpi-value" style="color: #7c3aed;">{{ kpi.concluidos_mes }}</div>
+        <div class="kpi-label">Concluídos (Mês)</div>
       </div>
     </div>
 
   </div>
+  {% endif %}
 
-  <!-- Tables Row -->
   <div class="row g-4">
-
-    <!-- Últimas Solicitações de Material -->
-    <div class="col-xl-6">
-      <div class="card-corp">
-        <div class="card-header-corp">
-          <h6><i class="bi bi-box-seam me-2" style="color:#ca8a04;"></i>Últimas Solicitações de Material</h6>
-          <a href="{{ url_for('materiais') }}" style="font-size:.75rem;color:#1d5fa6;text-decoration:none;">
-            Ver todas <i class="bi bi-arrow-right ms-1"></i>
-          </a>
+    
+    <div class="col-12 col-xl-6">
+      <div class="card-corp h-100">
+        <div class="card-header-corp d-flex justify-content-between align-items-center">
+          <h6 class="mb-0"><i class="bi bi-box-seam me-2" style="color: var(--sgd-blue);"></i>Materiais Recentes</h6>
+          <a href="{{ url_for('materiais') }}" class="btn btn-sm btn-link text-decoration-none" style="font-size: 0.8rem; font-weight: 600;">Ver todos</a>
         </div>
-        <div class="table-responsive">
-          <table class="table-corp">
+        
+        <div class="table-responsive px-4 pb-4 pt-2">
+          <table class="table-corp mb-0" style="table-layout: fixed; width: 100%;">
             <thead>
               <tr>
-                <th>Material</th>
-                <th>Solicitante</th>
-                <th>Status</th>
+                <th style="width: 50%;" class="text-start">Material</th>
+                <th style="width: 25%;" class="text-start">Solicitante</th>
+                <th style="width: 25%;" class="text-center">Status</th>
               </tr>
             </thead>
             <tbody>
-              {% for s in ultimas_mat %}
-              <tr>
-                <td class="fw-medium" style="max-width:160px;">
-                  <span class="d-block text-truncate" title="{{ s.nome_material }}">
+              {% set mat_lista = ultimas_mat if current_user.pode_gerenciar else minhas_mat %}
+              {% for s in mat_lista %}
+              <tr style="vertical-align: middle;">
+                
+                <td class="text-start" style="width: 100%; max-width: 200px;">
+                  <a href="{{ url_for('detalhe_material', mid=s.id) }}" class="d-block text-truncate fw-bold text-decoration-none" style="color: var(--sgd-navy); font-size: 0.9rem;" title="{{ s.nome_material }}">
                     {{ s.nome_material }}
+                  </a>
+                  <span class="d-block mt-1" style="font-size: 0.75rem; color: #9ca3af;">{{ s.data_criacao.strftime('%d/%m/%Y') }}</span>
+                </td>
+                
+                <td class="text-start" style="font-size: 0.85rem; color: #4b5563;">
+                  <span class="d-block text-truncate" style="max-width: 120px;" title="{{ s.solicitante.nome }}">
+                    {{ s.solicitante.nome.split()[0] | smart_title }}
                   </span>
                 </td>
-                <td style="color:#6b7280;">{{ s.solicitante.nome.split()[0] }}</td>
-                <td><span class="status-pill status-{{ s.status }}">{{ s.status }}</span></td>
-              </tr>
-              {% else %}
-              <tr><td colspan="3" class="empty-state py-3"><i class="bi bi-inbox d-block"></i>Sem registros</td></tr>
-              {% endfor %}
-            </tbody>
-          </table>
-        </div>
-      </div>
-    </div>
-
-    <!-- Últimos Chamados de Manutenção -->
-    <div class="col-xl-6">
-      <div class="card-corp">
-        <div class="card-header-corp">
-          <h6><i class="bi bi-tools me-2" style="color:#dc2626;"></i>Últimos Chamados de Manutenção</h6>
-          <a href="{{ url_for('manutencao') }}" style="font-size:.75rem;color:#1d5fa6;text-decoration:none;">
-            Ver todos <i class="bi bi-arrow-right ms-1"></i>
-          </a>
-        </div>
-        <div class="table-responsive">
-          <table class="table-corp">
-            <thead>
-              <tr>
-                <th>Local</th>
-                <th>Urgência</th>
-                <th>Status</th>
-              </tr>
-            </thead>
-            <tbody>
-              {% for m in ultimas_man %}
-              <tr>
-                <td class="fw-medium" style="max-width:160px;">
-                  <span class="d-block text-truncate" title="{{ m.local }}">{{ m.local }}</span>
+                <td class="text-center">
+                  <span class="status-pill status-{{ s.status }}">{{ s.status | replace('_', ' ') }}</span>
                 </td>
-                <td><span class="urgencia-{{ m.urgencia }}">{{ m.urgencia | capitalize }}</span></td>
-                <td><span class="status-pill status-{{ m.status }}">{{ m.status | replace('_',' ') }}</span></td>
               </tr>
               {% else %}
-              <tr><td colspan="3" class="empty-state py-3"><i class="bi bi-tools d-block"></i>Sem registros</td></tr>
+              <tr><td colspan="3" class="text-center text-muted py-4"><i class="bi bi-inbox fs-4 d-block mb-2"></i>Nenhum pedido ativo.</td></tr>
               {% endfor %}
             </tbody>
           </table>
@@ -150,84 +117,49 @@
       </div>
     </div>
 
-  </div>
-
-{# =========================================================
-   VISÃO DO USUÁRIO COMUM
-========================================================= #}
-{% else %}
-
-  <div class="mb-3" style="font-size:.85rem;color:#6b7280;">
-    Olá, <strong>{{ current_user.nome }}</strong> — veja suas solicitações recentes abaixo.
-  </div>
-
-  <div class="row g-4">
-
-    <!-- Minhas Solicitações de Material -->
-    <div class="col-xl-6">
-      <div class="card-corp">
-        <div class="card-header-corp">
-          <h6><i class="bi bi-box-seam me-2" style="color:#ca8a04;"></i>Meus Materiais</h6>
-          <a href="{{ url_for('novo_material') }}" class="btn-corp-primary"
-             style="font-size:.72rem;padding:4px 12px;">
-            <i class="bi bi-plus-lg me-1"></i>Nova Solicitação
-          </a>
+    <div class="col-12 col-xl-6">
+      <div class="card-corp h-100">
+        <div class="card-header-corp d-flex justify-content-between align-items-center">
+          <h6 class="mb-0"><i class="bi bi-tools me-2" style="color: var(--sgd-blue);"></i>Manutenções Recentes</h6>
+          <a href="{{ url_for('manutencao') }}" class="btn btn-sm btn-link text-decoration-none" style="font-size: 0.8rem; font-weight: 600;">Ver todos</a>
         </div>
-        <div class="table-responsive">
-          <table class="table-corp">
+        
+        <div class="table-responsive px-4 pb-4 pt-2">
+          <table class="table-corp mb-0" style="table-layout: fixed; width: 100%;">
             <thead>
-              <tr><th>Material</th><th>Qtd.</th><th>Status</th></tr>
+              <tr>
+                <th style="width: 50%;" class="text-start">Local / Setor</th>
+                <th style="width: 20%;" class="text-center">Urgência</th>
+                <th style="width: 30%;" class="text-center">Status</th>
+              </tr>
             </thead>
             <tbody>
-              {% for s in minhas_mat %}
-              <tr>
-                <td class="fw-medium">{{ s.nome_material }}</td>
-                <td>{{ s.quantidade }}</td>
-                <td><span class="status-pill status-{{ s.status }}">{{ s.status }}</span></td>
+              {% set man_lista = ultimas_man if current_user.pode_gerenciar else minhas_man %}
+              {% for m in man_lista %}
+              <tr style="vertical-align: middle;">
+                
+                <td class="text-start" style="width: 100%; max-width: 200px;">
+                  <a href="{{ url_for('detalhe_chamado', cid=m.id) }}" class="d-block text-truncate fw-bold text-decoration-none" style="color: var(--sgd-navy); font-size: 0.9rem;" title="{{ m.local }}">
+                    {{ m.local }}
+                  </a>
+                  <span class="d-block mt-1" style="font-size: 0.75rem; color: #9ca3af;">{{ m.data_criacao.strftime('%d/%m/%Y') }}</span>
+                </td>
+                
+                <td class="text-center">
+                  {% if m.urgencia == 'alta' %}
+                    <span style="background: #fee2e2; color: #dc2626; padding: 3px 8px; border-radius: 50px; font-size: 0.65rem; font-weight: 700; text-transform: uppercase;">Alta</span>
+                  {% elif m.urgencia == 'media' %}
+                    <span style="background: #fef3c7; color: #d97706; padding: 3px 8px; border-radius: 50px; font-size: 0.65rem; font-weight: 700; text-transform: uppercase;">Média</span>
+                  {% else %}
+                    <span style="background: #dcfce7; color: #16a34a; padding: 3px 8px; border-radius: 50px; font-size: 0.65rem; font-weight: 700; text-transform: uppercase;">Baixa</span>
+                  {% endif %}
+                </td>
+                <td class="text-center">
+                  <span class="status-pill status-{{ m.status }}">{{ m.status | replace('_', ' ') }}</span>
+                </td>
               </tr>
               {% else %}
-              <tr><td colspan="3">
-                <div class="empty-state">
-                  <i class="bi bi-inbox"></i>
-                  <p>Nenhuma solicitação ainda.</p>
-                </div>
-              </td></tr>
-              {% endfor %}
-            </tbody>
-          </table>
-        </div>
-      </div>
-    </div>
-
-    <!-- Meus Chamados de Manutenção -->
-    <div class="col-xl-6">
-      <div class="card-corp">
-        <div class="card-header-corp">
-          <h6><i class="bi bi-tools me-2" style="color:#dc2626;"></i>Meus Chamados</h6>
-          <a href="{{ url_for('novo_chamado') }}" class="btn-corp-primary"
-             style="font-size:.72rem;padding:4px 12px;">
-            <i class="bi bi-plus-lg me-1"></i>Abrir Chamado
-          </a>
-        </div>
-        <div class="table-responsive">
-          <table class="table-corp">
-            <thead>
-              <tr><th>Local</th><th>Urgência</th><th>Status</th></tr>
-            </thead>
-            <tbody>
-              {% for m in minhas_man %}
-              <tr>
-                <td class="fw-medium">{{ m.local }}</td>
-                <td><span class="urgencia-{{ m.urgencia }}">{{ m.urgencia | capitalize }}</span></td>
-                <td><span class="status-pill status-{{ m.status }}">{{ m.status | replace('_',' ') }}</span></td>
-              </tr>
-              {% else %}
-              <tr><td colspan="3">
-                <div class="empty-state">
-                  <i class="bi bi-tools"></i>
-                  <p>Nenhum chamado aberto.</p>
-                </div>
-              </td></tr>
+              <tr><td colspan="3" class="text-center text-muted py-4"><i class="bi bi-inbox fs-4 d-block mb-2"></i>Nenhum chamado ativo.</td></tr>
               {% endfor %}
             </tbody>
           </table>
@@ -236,6 +168,66 @@
     </div>
 
   </div>
-{% endif %}
 
+</div>
+
+<style>
+  .kpi-grid {
+    display: grid;
+    grid-template-columns: repeat(1, 1fr);
+    gap: 16px;
+  }
+  
+  @media (min-width: 768px) {
+    .kpi-grid { grid-template-columns: repeat(2, 1fr); }
+  }
+  
+  @media (min-width: 1200px) {
+    .kpi-grid { grid-template-columns: repeat(3, 1fr); gap: 20px; }
+  }
+
+  /* Cartões com fundo branco e design limpo */
+  .kpi-card {
+    background-color: #ffffff;
+    border-radius: 12px;
+    padding: 20px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.03);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    border: 1px solid #f3f4f6;
+  }
+
+  .kpi-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 10px 20px rgba(0,0,0,0.06);
+    border-color: #e5e7eb;
+  }
+
+  .kpi-card .kpi-icon {
+    width: 54px; 
+    height: 54px; 
+    border-radius: 14px;
+    display: flex; 
+    align-items: center; 
+    justify-content: center; 
+    font-size: 1.6rem;
+  }
+
+  .kpi-card .kpi-value {
+    font-size: 1.9rem;
+    font-weight: 800;
+    line-height: 1.1;
+    margin-bottom: 4px;
+  }
+
+  .kpi-card .kpi-label {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: #6b7280; /* Texto do subtítulo neutro, a cor fica apenas no número */
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+</style>
 {% endblock %}

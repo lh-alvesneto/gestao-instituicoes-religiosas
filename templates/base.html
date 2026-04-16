@@ -248,7 +248,7 @@
       display: grid;
       /* A mágica: Cria colunas que se ajustam sozinhas. Nunca menores que 220px! */
       grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-      gap: 20px; /* Espaço uniforme entre todos os itens */
+      gap: 30px, 20px; /* Espaço uniforme entre todos os itens */
       background: #ffffff;
       border-radius: 12px;
       box-shadow: 0 4px 15px rgba(0,0,0,0.03);
@@ -509,19 +509,26 @@
 
   <main class="main-wrapper">
     
-    {% with messages = get_flashed_messages(with_categories=true) %}
-      {% if messages %}
-        <div class="mb-4">
-        {% for cat, msg in messages %}
-          {% set bs_class = 'success' if cat == 'success' else ('danger' if cat == 'danger' else ('warning' if cat == 'warning' else 'primary')) %}
-          <div class="alert alert-{{ bs_class }} alert-dismissible fade show border-0 shadow-sm" role="alert" style="border-left: 4px solid currentColor !important;">
-            {{ msg }}
-            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Fechar"></button>
-          </div>
-        {% endfor %}
-        </div>
-      {% endif %}
-    {% endwith %}
+    <div class="toast-container position-fixed bottom-0 end-0 p-4" style="z-index: 1055;">
+      {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+          {% for cat, msg in messages %}
+            {% set bs_class = 'success' if cat == 'success' else ('danger' if cat in ['danger', 'error'] else ('warning' if cat == 'warning' else 'primary')) %}
+            {% set icon_class = 'check-circle-fill' if bs_class == 'success' else ('exclamation-triangle-fill' if bs_class in ['danger', 'warning'] else 'info-circle-fill') %}
+            
+            <div class="toast align-items-center text-bg-{{ bs_class }} border-0 shadow-lg mb-3" role="alert" aria-live="assertive" aria-atomic="true" data-bs-delay="5000">
+              <div class="d-flex">
+                <div class="toast-body fw-medium" style="font-size: 0.95rem; display: flex; align-items: center; gap: 8px;">
+                  <i class="bi bi-{{ icon_class }} fs-5"></i>
+                  <span>{{ msg }}</span>
+                </div>
+                <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Fechar"></button>
+              </div>
+            </div>
+          {% endfor %}
+        {% endif %}
+      {% endwith %}
+    </div>
 
     {% block content %}{% endblock %}
     
@@ -551,5 +558,17 @@
       });
     });
   </script>
+
+  <script>
+    // Inicializa os Toasts Flutuantes automaticamente
+    document.addEventListener('DOMContentLoaded', function () {
+      var toastElList = [].slice.call(document.querySelectorAll('.toast'));
+      var toastList = toastElList.map(function (toastEl) {
+        return new bootstrap.Toast(toastEl);
+      });
+      toastList.forEach(toast => toast.show());
+    });
+  </script>
+
 </body>
 </html>

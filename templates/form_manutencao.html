@@ -1,155 +1,159 @@
 {% extends "base.html" %}
-{% block title %}{% if editando %}Editar Chamado{% else %}Novo Chamado{% endif %} — SGD{% endblock %}
-{% block page_icon %}tools{% endblock %}
-{% block page_title %}{% if editando %}Editar Chamado #{{ chamado.id }}{% else %}Abrir Chamado de Manutenção{% endif %}{% endblock %}
+
+{% block title %}{% if editando %}Editar Chamado{% else %}Novo Chamado de Manutenção{% endif %} — IPVP{% endblock %}
 
 {% block content %}
-<div style="max-width:720px;">
+<div class="container-fluid p-0">
 
-  <div class="card-corp">
-    <div class="card-header-corp">
-      <h6>
-        <i class="bi bi-{% if editando %}pencil{% else %}plus-circle{% endif %} me-2 opacity-50"></i>
-        {% if editando %}Editar informações do chamado{% else %}Preencha os dados do problema{% endif %}
-      </h6>
-    </div>
-    <div class="card-body-corp">
+  <div class="mb-4">
+    <a href="{{ url_for('manutencao') }}" class="text-decoration-none mb-2 d-inline-block" style="color: #6b7280; font-size: 0.85rem; font-weight: 600;">
+      <i class="bi bi-arrow-left me-1"></i> Voltar para Manutenção
+    </a>
+    <h1 class="h3 mb-0" style="font-weight: 800; color: var(--sgd-navy);">
+      <i class="bi {% if editando %}bi-pencil-square{% else %}bi-tools{% endif %} me-2" style="color: var(--sgd-blue);"></i>
+      {% if editando %}Editar Chamado{% else %}Novo Chamado de Manutenção{% endif %}
+    </h1>
+  </div>
 
-      <form method="POST"
-            action="{{ url_for('editar_chamado', cid=chamado.id) if editando else url_for('novo_chamado') }}"
-            enctype="multipart/form-data">
-
-        <div class="row g-3 mb-3">
-
-          <div class="col-md-7">
-            <label class="form-label-corp">Local / Área <span style="color:#e53e3e;">*</span></label>
-            <input type="text" name="local" class="form-control form-control-corp"
-                   placeholder="Ex.: Salão Principal, Banheiro Feminino 1º andar..."
-                   value="{{ chamado.local if chamado else '' }}" required/>
-          </div>
-
-          <div class="col-md-5">
-            <label class="form-label-corp">Nível de Urgência <span style="color:#e53e3e;">*</span></label>
-            <select name="urgencia" class="form-select form-select-corp">
-              {% set current_urgencia = chamado.urgencia if chamado else 'media' %}
-              <option value="baixa"  {% if current_urgencia == 'baixa'  %}selected{% endif %}>🟢 Baixa — Pode aguardar</option>
-              <option value="media"  {% if current_urgencia == 'media'  %}selected{% endif %}>🟡 Média — Resolver em breve</option>
-              <option value="alta"   {% if current_urgencia == 'alta'   %}selected{% endif %}>🔴 Alta — Risco ou impacto imediato</option>
-            </select>
-          </div>
-
+  <div class="row">
+    <div class="col-12 col-xl-6 col-lg-8"> 
+      
+      <div class="card-corp">
+        <div class="card-header-corp d-flex align-items-center gap-2">
+          <i class="bi {% if editando %}bi-pencil{% else %}bi-exclamation-circle{% endif %} text-muted"></i>
+          <h6 class="mb-0">{% if editando %}Atualize os detalhes da ocorrência{% else %}Detalhes da Ocorrência{% endif %}</h6>
         </div>
-
-        <div class="mb-3">
-          <label class="form-label-corp">Descrição do Problema <span style="color:#e53e3e;">*</span></label>
-          <textarea name="descricao" class="form-control form-control-corp" rows="4"
-                    placeholder="Descreva o problema com detalhes: o que falhou, quando foi identificado, se há risco de segurança..."
-                    required>{{ chamado.descricao if chamado else '' }}</textarea>
-        </div>
-
-        <!-- Upload de imagens -->
-        <div class="mb-3">
-          <label class="form-label-corp">
-            Fotos do Problema
-            <span style="font-weight:400;color:#9ca3af;font-size:.72rem;">(máx. 3 imagens · PNG/JPG · 5MB cada)</span>
-          </label>
-
-          {% if editando and chamado.anexos.count() > 0 %}
-          <div class="mb-2 p-3" style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:6px;">
-            <div style="font-size:.72rem;font-weight:600;color:#9ca3af;text-transform:uppercase;
-                        letter-spacing:.06em;margin-bottom:8px;">
-              Imagens já enviadas ({{ chamado.anexos.count() }}/3)
-            </div>
-            <div class="d-flex flex-wrap gap-2">
-              {% for a in chamado.anexos %}
-              <div style="background:#e2e8f0;border-radius:4px;padding:4px 10px;
-                          font-size:.75rem;color:#374151;">
-                <i class="bi bi-image me-1"></i>{{ a.nome_original or a.caminho_arquivo }}
+        
+        <div class="p-4">
+          <form method="POST" action="{{ url_for('editar_chamado', cid=chamado.id) if editando else url_for('novo_chamado') }}" enctype="multipart/form-data">
+            
+            <div class="row mb-4">
+              <div class="col-12 mb-4">
+                <label for="local" class="form-label-corp">Local / Setor <span class="text-danger">*</span></label>
+                <input type="text" class="form-control input-corp" id="local" name="local" 
+                       placeholder="Ex: Templo Principal, Cozinha..." 
+                       value="{{ chamado.local if editando else '' }}" required autofocus>
               </div>
-              {% endfor %}
+              
+              <div class="col-12">
+                <label class="form-label-corp d-block">Urgência <span class="text-danger">*</span></label>
+                <div class="d-flex gap-2">
+                  
+                  {% set urg = chamado.urgencia if editando else 'media' %}
+                  
+                  <label for="urg_baixa" class="chip-label">
+                    <input type="radio" name="urgencia" id="urg_baixa" value="baixa" class="chip-input" {% if urg == 'baixa' %}checked{% endif %}>
+                    <span class="chip-btn baixa">Baixa</span>
+                  </label>
+
+                  <label for="urg_media" class="chip-label">
+                    <input type="radio" name="urgencia" id="urg_media" value="media" class="chip-input" {% if urg == 'media' %}checked{% endif %}>
+                    <span class="chip-btn media">Média</span>
+                  </label>
+
+                  <label for="urg_alta" class="chip-label">
+                    <input type="radio" name="urgencia" id="urg_alta" value="alta" class="chip-input" {% if urg == 'alta' %}checked{% endif %}>
+                    <span class="chip-btn alta">Alta</span>
+                  </label>
+
+                </div>
+              </div>
             </div>
-            {% if chamado.anexos.count() >= 3 %}
-            <div style="font-size:.72rem;color:#d97706;margin-top:6px;">
-              <i class="bi bi-exclamation-triangle me-1"></i>Limite máximo de imagens atingido.
+            
+            <div class="mb-4">
+              <label for="descricao" class="form-label-corp">Descrição do Problema <span class="text-danger">*</span></label>
+              <textarea class="form-control input-corp" id="descricao" name="descricao" 
+                        rows="4" placeholder="Descreva detalhadamente o que precisa de reparo..." required>{{ chamado.descricao if editando else '' }}</textarea>
+            </div>
+
+            <div class="mb-4">
+              <label class="form-label-corp d-block">{% if editando %}Anexar Novas Fotos (Opcional){% else %}Anexar Fotos (Opcional){% endif %}</label>
+              
+              <label for="imagens" class="upload-zone">
+                <div class="upload-content">
+                  <i class="bi bi-cloud-arrow-up text-muted"></i>
+                  <span class="upload-title">Clique para selecionar fotos</span>
+                  <span class="upload-subtitle">Ou arraste e solte os arquivos aqui</span>
+                </div>
+              </label>
+              
+              <input type="file" class="d-none" id="imagens" name="imagens" accept="image/*" multiple>
+              
+              <div id="file-list" class="mt-3 d-flex flex-wrap gap-2"></div>
+              <div class="form-text mt-2" style="font-size: 0.75rem;">
+                <i class="bi bi-info-circle me-1"></i> Máximo de 3 fotos (até 5MB cada).
+              </div>
+            </div>
+
+            {% if editando and current_user.pode_gerenciar %}
+            <div class="mb-4 p-3 rounded" style="background-color: #fef2f2; border: 1px solid #fca5a5;">
+              <label for="justificativa_edicao" class="form-label-corp text-danger" style="font-weight: 700;">Motivo da Edição (Auditoria) <span class="text-danger">*</span></label>
+              <input type="text" class="form-control input-corp" id="justificativa_edicao" name="justificativa_edicao" 
+                     placeholder="Ex: Ajuste de urgência, correção de local..." required>
             </div>
             {% endif %}
-          </div>
-          {% endif %}
 
-          {% if not (editando and chamado.anexos.count() >= 3) %}
-          <input type="file" name="imagens" class="form-control form-control-corp"
-                 accept=".png,.jpg,.jpeg" multiple
-                 id="fileInput"/>
-          <div id="filePreview" style="margin-top:8px;font-size:.75rem;color:#6b7280;"></div>
-          {% endif %}
+            <div class="d-flex justify-content-end gap-3 mt-4 pt-4 border-top">
+              <a href="{{ url_for('manutencao') }}" class="btn btn-light" style="font-weight: 600; font-size: 0.9rem; padding: 10px 20px; color: #4b5563; border-color: #d1d5db;">
+                Cancelar
+              </a>
+              <button type="submit" class="btn-corp-primary d-flex align-items-center gap-2" style="font-size: 0.9rem; padding: 10px 20px; border: none; box-shadow: none;">
+                <i class="bi {% if editando %}bi-check-lg{% else %}bi-check-lg{% endif %}"></i> 
+                {% if editando %}Salvar Alterações{% else %}Abrir Chamado{% endif %}
+              </button>
+            </div>
+            
+          </form>
         </div>
+      </div>
 
-        {# Justificativa de edição para Admin/Gestor #}
-        {% if editando and current_user.pode_gerenciar %}
-        <div class="mb-4 p-3" style="background:#fffbeb;border:1px solid #fde68a;border-radius:8px;">
-          <label class="form-label-corp" style="color:#92400e;">
-            <i class="bi bi-shield-exclamation me-1"></i>
-            Justificativa da Edição <span style="color:#e53e3e;">*</span>
-          </label>
-          <textarea name="justificativa_edicao" class="form-control form-control-corp"
-                    rows="2" placeholder="Motivo da alteração — será gravado na Auditoria."
-                    required></textarea>
-          <div style="font-size:.72rem;color:#92400e;margin-top:6px;">
-            <i class="bi bi-info-circle me-1"></i>
-            Registrado em Auditoria com seu usuário e data/hora.
-          </div>
-        </div>
-        {% endif %}
-
-        <div class="d-flex gap-2">
-          <button type="submit" class="btn-corp-primary">
-            <i class="bi bi-{% if editando %}check-lg{% else %}send{% endif %} me-1"></i>
-            {% if editando %}Salvar Alterações{% else %}Abrir Chamado{% endif %}
-          </button>
-          <a href="{{ url_for('manutencao') }}"
-             style="padding:7px 18px;border:1px solid #d1d5db;border-radius:6px;
-                    font-size:.83rem;font-weight:600;text-decoration:none;
-                    color:#374151;background:#fff;">
-            Cancelar
-          </a>
-        </div>
-
-      </form>
     </div>
   </div>
 
-  {% if editando %}
-  <div class="mt-3" style="font-size:.75rem;color:#9ca3af;">
-    <i class="bi bi-clock me-1"></i>
-    Chamado aberto em {{ chamado.data_criacao.strftime('%d/%m/%Y às %H:%M') }}
-    por <strong>{{ chamado.solicitante.nome }}</strong> · Status atual:
-    <span class="status-pill status-{{ chamado.status }}">{{ chamado.status | replace('_', ' ') }}</span>
-  </div>
-  {% endif %}
-
 </div>
-{% endblock %}
 
-{% block scripts %}
+<style>
+  .chip-label { cursor: pointer; margin: 0; }
+  .chip-input { display: none; }
+  .chip-btn {
+    display: inline-block; padding: 6px 14px; border-radius: 50px; font-size: 0.75rem;
+    font-weight: 700; text-transform: uppercase; background: #f3f4f6; color: #6b7280;
+    border: 2px solid transparent; transition: all 0.2s ease;
+  }
+  .chip-btn:hover { background: #e5e7eb; }
+  .chip-input:checked + .chip-btn.baixa { background: #dcfce7; color: #16a34a; border-color: #16a34a; }
+  .chip-input:checked + .chip-btn.media { background: #fef3c7; color: #d97706; border-color: #d97706; }
+  .chip-input:checked + .chip-btn.alta  { background: #fee2e2; color: #dc2626; border-color: #dc2626; }
+  .upload-zone {
+    display: block; width: 100%; padding: 2rem; border: 2px dashed #d1d5db; border-radius: 12px;
+    background: #f9fafb; cursor: pointer; transition: all 0.2s ease;
+  }
+  .upload-zone:hover { border-color: var(--sgd-light); background: #f0fdf4; }
+  .upload-content { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; }
+  .upload-content i { font-size: 2.2rem; }
+  .upload-title { font-weight: 700; color: var(--sgd-navy); font-size: 0.95rem; }
+  .upload-subtitle { color: #6b7280; font-size: 0.8rem; }
+  .file-badge {
+    background: #ffffff; border: 1px solid #d1d5db; color: #374151; padding: 6px 12px;
+    border-radius: 8px; font-size: 0.8rem; font-weight: 600; display: flex; align-items: center;
+    gap: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+  }
+</style>
+
 <script>
-  // Preview de arquivos selecionados
-  document.getElementById('fileInput')?.addEventListener('change', function() {
-    const preview = document.getElementById('filePreview');
-    const files = Array.from(this.files);
-    if (files.length === 0) { preview.textContent = ''; return; }
-    if (files.length > 3) {
-      preview.innerHTML = '<span style="color:#dc2626;"><i class="bi bi-exclamation-triangle me-1"></i>Máximo 3 imagens.</span>';
-      this.value = '';
-      return;
-    }
-    const names = files.map(f => {
-      const ok = f.size <= 5 * 1024 * 1024;
-      return `<span style="color:${ok ? '#16a34a' : '#dc2626'}">
-        <i class="bi bi-${ok ? 'check-circle' : 'x-circle'} me-1"></i>${f.name}
-        (${(f.size/1024).toFixed(0)} KB)
-      </span>`;
-    }).join(' &nbsp;·&nbsp; ');
-    preview.innerHTML = names;
+  document.addEventListener('DOMContentLoaded', function () {
+    const fileInput = document.getElementById('imagens');
+    const fileList = document.getElementById('file-list');
+
+    fileInput.addEventListener('change', function() {
+      fileList.innerHTML = '';
+      Array.from(this.files).forEach(file => {
+        const badge = document.createElement('div');
+        badge.className = 'file-badge';
+        badge.innerHTML = `<i class="bi bi-image" style="color: var(--sgd-light);"></i> ${file.name}`;
+        fileList.appendChild(badge);
+      });
+    });
   });
 </script>
 {% endblock %}

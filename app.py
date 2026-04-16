@@ -30,6 +30,24 @@ UPLOAD_DIR = os.path.join(BASE_DIR, 'uploads')
 
 app = Flask(__name__)
 
+@app.template_filter('smart_title')
+def smart_title(text):
+    if not text:
+        return text
+    
+    excecoes = ['de', 'da', 'do', 'das', 'dos', 'e']
+    palavras = text.split()
+    resultado = []
+    
+    for i, palavra in enumerate(palavras):
+        palavra_lower = palavra.lower()
+        if palavra_lower in excecoes and i > 0:
+            resultado.append(palavra_lower)
+        else:
+            resultado.append(palavra_lower.capitalize())
+            
+    return ' '.join(resultado)
+
 app.config.update(
     SECRET_KEY              = os.environ.get('SECRET_KEY', 'sgd-chave-secreta-dev-2024'),
     SQLALCHEMY_DATABASE_URI = f"sqlite:///{os.path.join(BASE_DIR, 'demandas.db')}",
@@ -404,41 +422,49 @@ def dashboard():
     u = current_user
 
     if u.pode_gerenciar:
-        # ---- Contadores KPI ----
-        kpi = {
-            'mat_pendente'   : SolicitacaoMaterial.query.filter_by(status='pendente',     ativo=True).count(),
-            'mat_aprovado'   : SolicitacaoMaterial.query.filter_by(status='aprovado',     ativo=True).count(),
-            'man_aberto'     : SolicitacaoManutencao.query.filter_by(status='aberto',      ativo=True).count(),
-            'man_andamento'  : SolicitacaoManutencao.query.filter_by(status='em_andamento', ativo=True).count(),
-            'man_alta'       : SolicitacaoManutencao.query.filter_by(status='aberto', urgencia='alta', ativo=True).count(),
-            'total_usuarios' : Usuario.query.filter_by(ativo=True).count(),
-        }
-        ultimas_mat = (SolicitacaoMaterial.query
-                       .filter_by(ativo=True)
-                       .order_by(SolicitacaoMaterial.data_criacao.desc())
-                       .limit(6).all())
-        ultimas_man = (SolicitacaoManutencao.query
-                       .filter_by(ativo=True)
-                       .order_by(SolicitacaoManutencao.data_criacao.desc())
-                       .limit(6).all())
-        return render_template('dashboard.html',
-                               kpi=kpi,
-                               ultimas_mat=ultimas_mat,
-                               ultimas_man=ultimas_man)
-    else:
-        # Usuário comum vê apenas as próprias solicitações ativas
-        minhas_mat = (SolicitacaoMaterial.query
-                      .filter_by(id_usuario=u.id, ativo=True)
-                      .order_by(SolicitacaoMaterial.data_criacao.desc())
-                      .limit(5).all())
-        minhas_man = (SolicitacaoManutencao.query
-                      .filter_by(id_usuario=u.id, ativo=True)
-                      .order_by(SolicitacaoManutencao.data_criacao.desc())
-                      .limit(5).all())
-        return render_template('dashboard.html',
-                               minhas_mat=minhas_mat,
-                               minhas_man=minhas_man)
+        # Pega a data do primeiro dia do mês atual para a métrica de produtividade
+        hoje = datetime.utcnow()
+        inicio_mes = datetime(hoje.year, hoje.month, 1)
 
+        # ---- Contadores KPI Focados na Operação ----
+        kpi = {
+            # Fila de Trabalho (Ação Imediata)
+            'mat_pendente': SolicitacaoMaterial.query.filter_by(status='pendente', ativo=True).count(),
+            'man_aberto': SolicitacaoManutencao.query.filter_by(status='aberto', ativo=True).count(),
+            'man_alta': SolicitacaoManutencao.query.filter(
+                SolicitacaoManutencao.status.in_(['aberto', 'em_andamento']),
+                SolicitacaoManutencao.urgencia == 'alta',
+                SolicitacaoManutencao.ativo == True
+            ).count(),
+            
+            # Visão Geral (Controle)
+            'man_andamento': SolicitacaoManutencao.query.filter_by(status='em_andamento', ativo=True).count(),
+            'mat_aprovado': SolicitacaoMaterial.query.filter_by(status='aprovado', ativo=True).count(),
+            
+            # Produtividade (Entregues/Concluídos no mês atual)
+            'concluidos_mes': (
+                SolicitacaoMaterial.query.filter(
+                    SolicitacaoMaterial.status == 'entregue',
+                    SolicitacaoMaterial.ativo == True,
+                    SolicitacaoMaterial.data_criacao >= inicio_mes
+                ).count() +
+                SolicitacaoManutencao.query.filter(
+                    SolicitacaoManutencao.status == 'concluido',
+                    SolicitacaoManutencao.ativo == True,
+                    SolicitacaoManutencao.data_criacao >= inicio_mes
+                ).count()
+            )
+        }
+        
+        ultimas_mat = SolicitacaoMaterial.query.filter_by(ativo=True).order_by(SolicitacaoMaterial.data_criacao.desc()).limit(6).all()
+        ultimas_man = SolicitacaoManutencao.query.filter_by(ativo=True).order_by(SolicitacaoManutencao.data_criacao.desc()).limit(6).all()
+        
+        return render_template('dashboard.html', kpi=kpi, ultimas_mat=ultimas_mat, ultimas_man=ultimas_man)
+    else:
+        # Usuário comum... (MANTENHA O CÓDIGO ORIGINAL AQUI)
+        minhas_mat = SolicitacaoMaterial.query.filter_by(id_usuario=u.id, ativo=True).order_by(SolicitacaoMaterial.data_criacao.desc()).limit(5).all()
+        minhas_man = SolicitacaoManutencao.query.filter_by(id_usuario=u.id, ativo=True).order_by(SolicitacaoManutencao.data_criacao.desc()).limit(5).all()
+        return render_template('dashboard.html', minhas_mat=minhas_mat, minhas_man=minhas_man)
 
 # =============================================================================
 # ROTAS — GESTÃO DE USUÁRIOS (Admin + Gestor)
@@ -448,15 +474,37 @@ def dashboard():
 @perfil_requerido('administrador', 'gestor')
 @usuario_ativo_requerido
 def lista_usuarios():
-    if current_user.is_admin:
-        usuarios = Usuario.query.filter_by(ativo=True).order_by(Usuario.nome).all()
-    else:
-        # Gestor só vê os usuários que ele mesmo criou
-        usuarios = Usuario.query.filter_by(
-            ativo=True, criado_por_id=current_user.id
-        ).order_by(Usuario.nome).all()
+    # 1. Captura os parâmetros de busca, página e quantidade
+    termo = request.args.get('q', '').strip()
+    page = request.args.get('page', 1, type=int)
+    per_page = request.args.get('per_page', 10, type=int) # 10 é o padrão
 
-    return render_template('usuarios.html', usuarios=usuarios)
+    # 2. Inicia a query base
+    query = Usuario.query.filter_by(ativo=True)
+
+    # 3. Regra RBAC
+    if not current_user.is_admin:
+        query = query.filter_by(criado_por_id=current_user.id)
+
+    # 4. Aplica o filtro de pesquisa dinâmica
+    if termo:
+        busca_formatada = f"%{termo}%"
+        query = query.filter(
+            db.or_(
+                Usuario.nome.ilike(busca_formatada),
+                Usuario.email.ilike(busca_formatada)
+            )
+        )
+
+    # 5. Substituímos o .all() pelo .paginate()
+    usuarios_paginados = query.order_by(Usuario.nome).paginate(
+        page=page, per_page=per_page, error_out=False
+    )
+
+    return render_template('usuarios.html', 
+                           usuarios=usuarios_paginados, 
+                           termo=termo, 
+                           per_page=per_page)
 
 
 @app.route('/usuarios/novo', methods=['GET', 'POST'])
@@ -543,15 +591,36 @@ def inativar_usuario(uid: int):
 @login_required
 @usuario_ativo_requerido
 def materiais():
+    termo = request.args.get('q', '').strip()
+    page = request.args.get('page', 1, type=int)
+    per_page = request.args.get('per_page', 10, type=int)
+
     u = current_user
     query = SolicitacaoMaterial.query.filter_by(ativo=True)
 
+    # Restringe para usuário comum
     if u.is_usuario:
         query = query.filter_by(id_usuario=u.id)
 
-    lista = query.order_by(SolicitacaoMaterial.data_criacao.desc()).all()
-    return render_template('materiais.html', lista=lista)
+    # Filtro de Busca Dinâmica (Material ou Solicitante)
+    if termo:
+        busca_formatada = f"%{termo}%"
+        query = query.join(Usuario, SolicitacaoMaterial.id_usuario == Usuario.id).filter(
+            db.or_(
+                SolicitacaoMaterial.nome_material.ilike(busca_formatada),
+                Usuario.nome.ilike(busca_formatada)
+            )
+        )
 
+    # Paginação em vez de trazer tudo de uma vez
+    lista_paginada = query.order_by(SolicitacaoMaterial.data_criacao.desc()).paginate(
+        page=page, per_page=per_page, error_out=False
+    )
+    
+    return render_template('materiais.html', 
+                           lista=lista_paginada, 
+                           termo=termo, 
+                           per_page=per_page)
 
 @app.route('/materiais/novo', methods=['GET', 'POST'])
 @login_required
@@ -593,18 +662,51 @@ def editar_material(mid: int):
     sol = SolicitacaoMaterial.query.filter_by(id=mid, ativo=True).first_or_404()
     u   = current_user
 
-    # --- Regras de bloqueio de edição ---
-    if sol.status == 'em_andamento':
-        flash('Este chamado está em andamento. Use comentários para adicionar informações.', 'info')
+    # --- REGRA DE NEGÓCIO: Bloqueia edição de estados finais ---
+    if sol.status in ['aprovado', 'entregue', 'cancelado']:
+        flash('Solicitações aprovadas, entregues ou canceladas não podem ser editadas.', 'warning')
         return redirect(url_for('detalhe_material', mid=mid))
 
     # Usuário comum: só edita os próprios + status pendente
     if u.is_usuario:
         if sol.id_usuario != u.id:
             abort(403)
-        if sol.status not in ('pendente',):
+        if sol.status != 'pendente':
             flash('Você só pode editar solicitações com status "pendente".', 'warning')
             return redirect(url_for('materiais'))
+
+    if request.method == 'POST':
+        justificativa_edicao = request.form.get('justificativa_edicao', '').strip()
+
+        # Admin/Gestor: justificativa de edição obrigatória
+        if u.pode_gerenciar and not justificativa_edicao:
+            flash('Gestores e Administradores devem informar a justificativa da edição.', 'warning')
+            return render_template('form_material.html', sol=sol, editando=True)
+
+        dados_antes = {
+            'nome_material': sol.nome_material,
+            'quantidade':    sol.quantidade,
+            'justificativa': sol.justificativa,
+        }
+
+        sol.nome_material = request.form.get('nome_material', sol.nome_material).strip()
+        sol.quantidade    = int(request.form.get('quantidade', sol.quantidade))
+        sol.justificativa = request.form.get('justificativa', sol.justificativa).strip()
+
+        log_auditoria('EDITOU', 'solicitacao_material', sol.id, {
+            'antes': dados_antes,
+            'depois': {
+                'nome_material': sol.nome_material,
+                'quantidade':    sol.quantidade,
+                'justificativa': sol.justificativa,
+            },
+            'justificativa_edicao': justificativa_edicao or 'N/A (usuário comum)',
+        })
+        db.session.commit()
+        flash('Solicitação atualizada com sucesso.', 'success')
+        return redirect(url_for('materiais'))
+
+    return render_template('form_material.html', sol=sol, editando=True)
 
     if request.method == 'POST':
         justificativa_edicao = request.form.get('justificativa_edicao', '').strip()
@@ -658,7 +760,19 @@ def status_material(mid: int, novo_status: str):
         'responsavel': current_user.email,
     })
     db.session.commit()
-    flash(f'Status atualizado para "{novo_status}".', 'success')
+    
+    # MUDANÇA AQUI: Dicionário para escolher a cor baseada na ação
+    categoria_toast = {
+        'pendente': 'warning',   # Amarelo
+        'aprovado': 'success',   # Verde
+        'entregue': 'success',   # Verde
+        'cancelado': 'danger'    # Vermelho
+    }
+    
+    # Pega a cor correspondente (ou 'info' como padrão se algo der errado)
+    cor = categoria_toast.get(novo_status, 'info')
+    
+    flash(f'Status atualizado para "{novo_status.capitalize()}".', cor)
     return redirect(url_for('materiais'))
 
 
@@ -669,17 +783,18 @@ def excluir_material(mid: int):
     sol = SolicitacaoMaterial.query.filter_by(id=mid, ativo=True).first_or_404()
     u   = current_user
 
-    # Usuário comum: só exclui o próprio, se pendente
     if u.is_usuario:
         if sol.id_usuario != u.id or sol.status != 'pendente':
             abort(403)
 
-    sol.ativo = False   # SOFT DELETE — nunca db.session.delete()
+    sol.ativo = False
     log_auditoria('EXCLUIU', 'solicitacao_material', sol.id, {
         'material': sol.nome_material, 'status_antes': sol.status,
     })
     db.session.commit()
-    flash('Solicitação removida (soft delete).', 'info')
+    
+    # MUDANÇA AQUI: Trocamos 'info' por 'danger' para o Toast ficar vermelho
+    flash('Solicitação removida (soft delete).', 'danger')
     return redirect(url_for('materiais'))
 
 
@@ -729,14 +844,37 @@ def comentar_material(mid: int):
 @login_required
 @usuario_ativo_requerido
 def manutencao():
-    u     = current_user
+    termo = request.args.get('q', '').strip()
+    page = request.args.get('page', 1, type=int)
+    per_page = request.args.get('per_page', 10, type=int)
+
+    u = current_user
     query = SolicitacaoManutencao.query.filter_by(ativo=True)
 
+    # Restringe para usuário comum
     if u.is_usuario:
         query = query.filter_by(id_usuario=u.id)
 
-    lista = query.order_by(SolicitacaoManutencao.data_criacao.desc()).all()
-    return render_template('manutencao.html', lista=lista)
+    # Filtro de Busca Dinâmica (Local, Descrição ou Solicitante)
+    if termo:
+        busca_formatada = f"%{termo}%"
+        query = query.join(Usuario, SolicitacaoManutencao.id_usuario == Usuario.id).filter(
+            db.or_(
+                SolicitacaoManutencao.local.ilike(busca_formatada),
+                SolicitacaoManutencao.descricao.ilike(busca_formatada),
+                Usuario.nome.ilike(busca_formatada)
+            )
+        )
+
+    # Paginação em vez de trazer tudo de uma vez
+    lista_paginada = query.order_by(SolicitacaoManutencao.data_criacao.desc()).paginate(
+        page=page, per_page=per_page, error_out=False
+    )
+    
+    return render_template('manutencao.html', 
+                           lista=lista_paginada, 
+                           termo=termo, 
+                           per_page=per_page)
 
 
 @app.route('/manutencao/novo', methods=['GET', 'POST'])
@@ -798,7 +936,6 @@ def novo_chamado():
 
     return render_template('form_manutencao.html')
 
-
 @app.route('/manutencao/<int:cid>/editar', methods=['GET', 'POST'])
 @login_required
 @usuario_ativo_requerido
@@ -806,9 +943,9 @@ def editar_chamado(cid: int):
     chamado = SolicitacaoManutencao.query.filter_by(id=cid, ativo=True).first_or_404()
     u       = current_user
 
-    # Bloqueio total quando em andamento
-    if chamado.status == 'em_andamento':
-        flash('Chamado em andamento: use comentários para adicionar informações.', 'info')
+    # --- REGRA DE NEGÓCIO: Bloqueia andamento e estados finais ---
+    if chamado.status in ['em_andamento', 'concluido', 'cancelado']:
+        flash('Chamados em andamento ou já finalizados não podem ser editados. Use os comentários.', 'warning')
         return redirect(url_for('detalhe_chamado', cid=cid))
 
     # Usuário comum: só edita o próprio e quando aberto
@@ -891,7 +1028,20 @@ def status_chamado(cid: int, novo_status: str):
         'responsavel': current_user.email,
     })
     db.session.commit()
-    flash(f'Status atualizado para "{novo_status}".', 'success')
+
+    # MUDANÇA 1: Dicionário de cores específico para Manutenção
+    categoria_toast = {
+        'aberto': 'warning',        # Amarelo (Atenção)
+        'em_andamento': 'info',     # Azul (Ação ocorrendo)
+        'concluido': 'success',     # Verde (Sucesso)
+        'cancelado': 'danger'       # Vermelho (Ação destrutiva)
+    }
+    cor = categoria_toast.get(novo_status, 'info')
+
+    # MUDANÇA 2: Formatação Limpa (Ex: "em_andamento" -> "Em Andamento")
+    status_formatado = novo_status.replace('_', ' ').title()
+
+    flash(f'Status atualizado para "{status_formatado}".', cor)
     return redirect(url_for('manutencao'))
 
 
@@ -911,7 +1061,7 @@ def excluir_chamado(cid: int):
         'local': chamado.local, 'status_antes': chamado.status,
     })
     db.session.commit()
-    flash('Chamado removido (soft delete).', 'info')
+    flash('Chamado removido com sucesso.', 'danger')
     return redirect(url_for('manutencao'))
 
 
@@ -923,32 +1073,29 @@ def detalhe_chamado(cid: int):
     if current_user.is_usuario and chamado.id_usuario != current_user.id:
         abort(403)
 
-    comentarios = ComentarioChamado.query.filter_by(
-        id_chamado=cid, tipo_chamado='manutencao'
-    ).order_by(ComentarioChamado.data_hora).all()
+    comentarios = ComentarioChamado.query.filter_by(id_chamado=cid, tipo_chamado='manutencao').all()
+    auditorias = Auditoria.query.filter_by(tabela_afetada='solicitacao_manutencao', registro_id=cid).all()
 
-    return render_template('detalhe_chamado.html',
-                           chamado=chamado,
-                           comentarios=comentarios,
-                           anexos=chamado.anexos.all())
+    return render_template('detalhe_chamado.html', chamado=chamado, timeline=timeline, anexos=chamado.anexos.all())
 
 
 @app.route('/manutencao/<int:cid>/comentar', methods=['POST'])
 @login_required
 @usuario_ativo_requerido
 def comentar_chamado(cid: int):
-    chamado = SolicitacaoManutencao.query.filter_by(id=cid, ativo=True).first_or_404()
-    texto   = request.form.get('texto', '').strip()
+    texto = request.form.get('texto', '').strip()
+    arquivo = request.files.get('anexo')
+    nome_salvo = None
 
-    if not texto:
-        flash('Comentário não pode ser vazio.', 'warning')
-        return redirect(url_for('detalhe_chamado', cid=cid))
+    if arquivo and arquivo.filename:
+        nome_salvo = salvar_arquivo(arquivo) # Reaproveitando sua função existente
 
     db.session.add(ComentarioChamado(
         id_chamado   = cid,
         tipo_chamado = 'manutencao',
         id_usuario   = current_user.id,
         texto        = texto,
+        caminho_anexo = nome_salvo # Nova coluna
     ))
     db.session.commit()
     flash('Comentário registrado.', 'success')
