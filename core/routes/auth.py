@@ -1,6 +1,6 @@
 from flask import Blueprint, render_template, redirect, url_for, request, flash
 from flask_login import login_user, logout_user, login_required, current_user
-
+from core.extensions import limiter
 from core.extensions import db
 from core.models import Usuario, Auditoria
 from core.utils import log_auditoria, usuario_ativo_requerido
@@ -16,6 +16,7 @@ def index():
     return redirect(url_for('auth.login'))
 
 @auth_bp.route('/login', methods=['GET', 'POST'])
+@limiter.limit("5 per minute")
 def login():
     if current_user.is_authenticated:
         return redirect(url_for('dashboard.index'))

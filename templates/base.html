@@ -505,7 +505,8 @@
         <i class="bi bi-box-arrow-right" style="font-size: 1.5rem;"></i>
       </a>
     </div>
-
+  </nav>
+  
   <main class="main-wrapper">
     
     <div class="toast-container position-fixed bottom-0 end-0 p-4" style="z-index: 1055;">
@@ -568,6 +569,97 @@
       toastList.forEach(toast => toast.show());
     });
   </script>
+
+  <script>
+  document.addEventListener('DOMContentLoaded', function() {
+      // 1. Inicializa Tooltips do Bootstrap
+      function initTooltips() {
+          var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+          tooltipTriggerList.map(function (tooltipTriggerEl) {
+              return new bootstrap.Tooltip(tooltipTriggerEl);
+          });
+      }
+      initTooltips();
+
+      // 2. Busca Fluida e Interceptação de Paginação (Fetch API)
+      const searchForms = document.querySelectorAll('.fluid-search-form');
+      searchForms.forEach(form => {
+          const inputs = form.querySelectorAll('input, select');
+          let debounceTimer;
+
+          // Escuta digitação e mudanças nos selects
+          inputs.forEach(input => {
+              input.addEventListener('input', () => {
+                  clearTimeout(debounceTimer);
+                  debounceTimer = setTimeout(() => executeFluidUpdate(form), 500); // 500ms debounce
+              });
+              input.addEventListener('change', () => {
+                  if(input.tagName === 'SELECT') executeFluidUpdate(form);
+              });
+          });
+
+          // Previne o "Enter" de recarregar a página
+          form.addEventListener('submit', (e) => {
+              e.preventDefault();
+              executeFluidUpdate(form);
+          });
+      });
+
+      // Intercepta cliques na paginação e ordenação
+      document.addEventListener('click', function(e) {
+          const fluidLink = e.target.closest('.fluid-link');
+          if (fluidLink) {
+              e.preventDefault();
+              executeFluidUpdate(null, fluidLink.href);
+          }
+      });
+
+      // O Motor que troca o HTML sem piscar a tela
+      function executeFluidUpdate(form, urlStr = null) {
+          let url;
+          if (urlStr) {
+              url = new URL(urlStr, window.location.origin);
+          } else {
+              url = new URL(form.action, window.location.origin);
+              const formData = new FormData(form);
+              for (const [key, value] of formData.entries()) {
+                  if (value) url.searchParams.append(key, value);
+              }
+              // Mantém parâmetros de ordenação atuais se existirem
+              const currentUrlParams = new URLSearchParams(window.location.search);
+              if (currentUrlParams.has('sort') && !url.searchParams.has('sort')) url.searchParams.append('sort', currentUrlParams.get('sort'));
+              if (currentUrlParams.has('dir') && !url.searchParams.has('dir')) url.searchParams.append('dir', currentUrlParams.get('dir'));
+          }
+
+          // Feedback visual: escurece levemente a tabela
+          const tableContainer = document.querySelector('.fluid-table-container');
+          if(tableContainer) tableContainer.style.opacity = '0.5';
+
+          fetch(url)
+              .then(res => res.text())
+              .then(html => {
+                  const parser = new DOMParser();
+                  const doc = parser.parseFromString(html, 'text/html');
+
+                  // Substitui a Tabela
+                  const newTable = doc.querySelector('.fluid-table-container');
+                  if(newTable && tableContainer) tableContainer.innerHTML = newTable.innerHTML;
+                  
+                  // Substitui a Paginação
+                  const paginationContainer = document.querySelector('.fluid-pagination-container');
+                  const newPagination = doc.querySelector('.fluid-pagination-container');
+                  if(newPagination && paginationContainer) paginationContainer.innerHTML = newPagination.innerHTML;
+
+                  // Restaura a opacidade e reativa os tooltips na nova tabela
+                  if(tableContainer) tableContainer.style.opacity = '1';
+                  initTooltips();
+                  
+                  // Atualiza a URL do navegador sem recarregar
+                  window.history.pushState({}, '', url);
+              });
+      }
+  });
+</script>
 
 </body>
 </html>

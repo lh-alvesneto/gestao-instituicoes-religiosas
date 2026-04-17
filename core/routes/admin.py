@@ -1,9 +1,10 @@
 from flask import Blueprint, render_template, request, redirect, url_for, flash, abort
 from flask_login import current_user
-
+from core.services import GestaoService
 from core.extensions import db
 from core.models import Usuario, Auditoria
 from core.utils import usuario_ativo_requerido, perfil_requerido, log_auditoria
+from datetime import datetime # Certifique-se de que isto está importado no topo
 
 admin_bp = Blueprint('admin', __name__)
 
@@ -13,21 +14,92 @@ admin_bp = Blueprint('admin', __name__)
 def lista_usuarios():
     termo = request.args.get('q', '').strip()
     page = request.args.get('page', 1, type=int)
-    per_page = request.args.get('per_page', 10, type=int)
+    per_page = min(request.args.get('per_page', 10, type=int), 100)
+    
+    # Captura os novos parâmetros
+    perfil = request.args.get('perfil', '')
+    status = request.args.get('status', '')
+    sort_col = request.args.get('sort', 'nome')
+    sort_dir = request.args.get('dir', 'asc')
 
-    query = Usuario.query.filter_by(ativo=True)
+    query = Usuario.query
 
-    if not current_user.is_admin:
-        query = query.filter_by(criado_por_id=current_user.id)
-
+    # 1. Aplica a Busca por Texto
     if termo:
-        busca_formatada = f"%{termo}%"
-        query = query.filter(db.or_(Usuario.nome.ilike(busca_formatada), Usuario.email.ilike(busca_formatada)))
+        busca = f"%{termo}%"
+        query = query.filter(db.or_(Usuario.nome.ilike(busca), Usuario.email.ilike(busca)))
+        
+    # 2. Aplica Filtros de Estado e Perfil
+    if perfil in ['administrador', 'gestor', 'usuario']:
+        query = query.filter(Usuario.perfil == perfil)
+    if status == 'ativo':
+        query = query.filter(Usuario.ativo == True)
+    elif status == 'inativo':
+        query = query.filter(Usuario.ativo == False)
 
-    usuarios_paginados = query.order_by(Usuario.nome).paginate(page=page, per_page=per_page, error_out=False)
+    # 3. Aplica a Ordenação Dinâmica
+    if sort_col == 'data':
+        if sort_dir == 'asc':
+            query = query.order_by(Usuario.data_criacao.asc())
+        else:
+            query = query.order_by(Usuario.data_criacao.desc())
+    else: # Default: nome
+        if sort_dir == 'desc':
+            query = query.order_by(Usuario.nome.desc())
+        else:
+            query = query.order_by(Usuario.nome.asc())
 
-    return render_template('usuarios.html', usuarios=usuarios_paginados, termo=termo, per_page=per_page)
+    usuarios = query.paginate(page=page, per_page=per_page, error_out=False)
+    
+    return render_template('usuarios.html', usuarios=usuarios)
 
+@admin_bp.route('/auditoria')
+@perfil_requerido('administrador')
+@usuario_ativo_requerido
+def auditoria():
+    page = request.args.get('page', 1, type=int)
+    per_page = min(request.args.get('per_page', 20, type=int), 100)
+
+    filtro_tabela = request.args.get('tabela', '').strip()
+    filtro_acao = request.args.get('acao', '').strip()
+    
+    # Novos parâmetros de data
+    data_inicio_str = request.args.get('data_inicio', '').strip()
+    data_fim_str = request.args.get('data_fim', '').strip()
+
+    query = Auditoria.query.options(db.joinedload(Auditoria.ator))
+
+    if filtro_tabela:
+        query = query.filter(Auditoria.tabela_afetada == filtro_tabela)
+    if filtro_acao:
+        query = query.filter(Auditoria.acao == filtro_acao)
+
+    # Filtragem por Período de Datas
+    if data_inicio_str:
+        try:
+            dt_inicio = datetime.strptime(data_inicio_str, '%Y-%m-%d')
+            query = query.filter(Auditoria.data_hora >= dt_inicio)
+        except ValueError:
+            pass # Ignora formato inválido
+
+    if data_fim_str:
+        try:
+            # Adiciona 23:59:59 para incluir todo o último dia
+            dt_fim = datetime.strptime(data_fim_str + " 23:59:59", '%Y-%m-%d %H:%M:%S')
+            query = query.filter(Auditoria.data_hora <= dt_fim)
+        except ValueError:
+            pass
+
+    registros = query.order_by(Auditoria.data_hora.desc()).paginate(page=page, per_page=per_page, error_out=False)
+    
+    # Busca listas distintas para preencher os selects dinamicamente
+    tabelas = db.session.query(Auditoria.tabela_afetada).distinct().order_by(Auditoria.tabela_afetada).all()
+    acoes = db.session.query(Auditoria.acao).distinct().order_by(Auditoria.acao).all()
+    
+    tabelas_lista = [t[0] for t in tabelas if t[0]]
+    acoes_lista = [a[0] for a in acoes if a[0]]
+    
+    return render_template('auditoria.html', registros=registros, tabelas=tabelas_lista, acoes=acoes_lista)
 
 @admin_bp.route('/usuarios/novo', methods=['GET', 'POST'])
 @perfil_requerido('administrador', 'gestor')
@@ -47,23 +119,13 @@ def novo_usuario():
 
         if not all([nome, email, senha]):
             flash('Preencha todos os campos obrigatórios.', 'warning')
-        elif Usuario.query.filter_by(email=email).first():
-            flash('Este e-mail já está cadastrado no sistema.', 'danger')
         else:
-            novo = Usuario(nome=nome, email=email, perfil=perfil, criado_por_id=current_user.id)
-            novo.set_senha(senha)
-            db.session.add(novo)
-            db.session.flush()
-
-            log_auditoria('CRIOU', 'usuario', novo.id, {
-                'nome': nome, 'email': email, 'perfil': perfil, 'criado_por': current_user.email
-            })
-            db.session.commit()
-            flash(f'Usuário "{nome}" criado com sucesso.', 'success')
-            return redirect(url_for('admin.lista_usuarios'))
+            sucesso, mensagem = GestaoService.criar_usuario(nome, email, senha, perfil, current_user.id)
+            flash(mensagem, 'success' if sucesso else 'danger')
+            if sucesso:
+                return redirect(url_for('admin.lista_usuarios'))
 
     return render_template('form_usuario.html', perfis=perfis_disponiveis)
-
 
 @admin_bp.route('/usuarios/<int:uid>/inativar', methods=['POST'])
 @perfil_requerido('administrador', 'gestor')
@@ -87,29 +149,12 @@ def inativar_usuario(uid: int):
     flash(f'Usuário "{alvo.nome}" foi inativado.', 'warning')
     return redirect(url_for('admin.lista_usuarios'))
 
-
-@admin_bp.route('/auditoria')
-@perfil_requerido('administrador')
+@admin_bp.route('/usuarios/<int:uid>/status', methods=['POST'])
+@perfil_requerido('administrador', 'gestor') # Fase 2: RBAC
 @usuario_ativo_requerido
-def auditoria():
-    page    = request.args.get('page', 1, type=int)
-    tabela  = request.args.get('tabela', '')
-    acao    = request.args.get('acao', '')
-
-    query = Auditoria.query.order_by(Auditoria.data_hora.desc())
-
-    if tabela:
-        query = query.filter(Auditoria.tabela_afetada == tabela)
-    if acao:
-        query = query.filter(Auditoria.acao == acao.upper())
-
-    registros = query.paginate(page=page, per_page=25, error_out=False)
-    tabelas_distintas = db.session.query(Auditoria.tabela_afetada).distinct().all()
-    acoes_distintas   = db.session.query(Auditoria.acao).distinct().all()
-
-    return render_template('auditoria.html',
-                           registros=registros,
-                           tabelas=[t[0] for t in tabelas_distintas],
-                           acoes=[a[0] for a in acoes_distintas],
-                           filtro_tabela=tabela,
-                           filtro_acao=acao)
+def alternar_status(uid: int):
+    # Fase 5: Proteção CSRF implícita (Flask-WTF valida todos os POSTs automaticamente)
+    sucesso, mensagem = GestaoService.alternar_status_usuario(uid, current_user.id)
+    
+    flash(mensagem, 'success' if sucesso else 'danger')
+    return redirect(url_for('admin.lista_usuarios'))

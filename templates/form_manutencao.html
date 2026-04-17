@@ -25,8 +25,8 @@
         </div>
         
         <div class="p-4">
-          <form method="POST" action="{{ url_for('manutencao.editar', cid=chamado.id) if editando else url_for('manutencao.novo') }}" enctype="multipart/form-data">
-            
+         <form method="POST" action="{{ url_for('manutencao.editar', cid=chamado.id) if editando else url_for('manutencao.novo') }}" enctype="multipart/form-data">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>  
             <div class="row mb-4">
               <div class="col-12 mb-4">
                 <label for="local" class="form-label-corp">Local / Setor <span class="text-danger">*</span></label>

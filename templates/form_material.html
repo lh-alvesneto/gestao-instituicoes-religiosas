@@ -26,7 +26,7 @@
         
         <div class="p-4">
           <form method="POST" action="{{ url_for('materiais.editar', mid=sol.id) if editando else url_for('materiais.novo') }}">
-            
+           <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/> 
             <div class="mb-4">
               <label for="nome_material" class="form-label-corp">Nome do Material <span class="text-danger">*</span></label>
               <input type="text" class="form-control input-corp" id="nome_material" name="nome_material" 

@@ -1,145 +1,217 @@
 {% extends "base.html" %}
-{% block title %}Auditoria — SGD{% endblock %}
-{% block page_icon %}shield-check{% endblock %}
-{% block page_title %}Log de Auditoria{% endblock %}
+{% block title %}Auditoria — IPVP{% endblock %}
 
 {% block content %}
+{% set mapa_tabelas = {
+  'usuario': 'Usuários',
+  'solicitacao_material': 'Materiais',
+  'solicitacao_manutencao': 'Manutenções',
+  'login': 'Acessos'
+} %}
 
-<!-- Filtros -->
-<div class="card-corp mb-3">
-  <div class="card-body-corp">
-    <form method="GET" action="{{ url_for('admin.auditoria') }}" class="d-flex flex-wrap gap-2 align-items-end">
+{% set mapa_acoes = {
+  'CRIOU': 'Criou',
+  'EDITOU': 'Editou',
+  'EXCLUIU': 'Excluiu',
+  'STATUS': 'Alterou Status',
+  'LOGIN': 'Login',
+  'LOGOUT': 'Logout',
+  'NEGADO': 'Acesso Negado',
+  'REATIVOU': 'Reativou',
+  'INATIVOU': 'Inativou'
+} %}
 
-      <div>
-        <label class="form-label-corp d-block">Tabela</label>
-        <select name="tabela" class="form-select form-select-corp" style="width:200px;">
-          <option value="">Todas</option>
-          {% for t in tabelas %}
-          <option value="{{ t }}" {% if filtro_tabela == t %}selected{% endif %}>{{ t }}</option>
-          {% endfor %}
+<div class="container-fluid p-0">
+
+  <div class="d-flex justify-content-between align-items-end mb-4 border-bottom pb-3">
+    <div>
+      <h1 class="h3 mb-1" style="font-weight: 800; color: var(--sgd-navy);">
+        <i class="bi bi-shield-check me-2" style="color: var(--sgd-blue);"></i>Log de Auditoria
+      </h1>
+      <p class="text-muted mb-0" style="font-size: 0.9rem;">Rastreamento de todas as ações sensíveis do sistema.</p>
+    </div>
+  </div>
+
+  <div class="card-corp mb-4">
+    <div class="card-body-corp">
+      <form id="searchForm" method="GET" action="{{ url_for('admin.auditoria') }}" class="fluid-search-form d-flex flex-wrap gap-3 align-items-end">
+
+        <div>
+          <label class="form-label text-muted" style="font-size: 0.8rem; font-weight: 600;">Módulo Afetado</label>
+          <select name="tabela" class="form-select form-select-sm shadow-none" style="min-width: 180px; border-color: #dee2e6;">
+            <option value="">Todos os Módulos</option>
+            {% for t in tabelas %}
+            <option value="{{ t }}" {% if request.args.get('tabela') == t %}selected{% endif %}>
+              {{ mapa_tabelas.get(t, t | capitalize) }}
+            </option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <div>
+          <label class="form-label text-muted" style="font-size: 0.8rem; font-weight: 600;">Ação</label>
+          <select name="acao" class="form-select form-select-sm shadow-none" style="min-width: 150px; border-color: #dee2e6;">
+            <option value="">Todas as Ações</option>
+            {% for a in acoes %}
+            <option value="{{ a }}" {% if request.args.get('acao') == a %}selected{% endif %}>
+              {{ mapa_acoes.get(a, a | capitalize) }}
+            </option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <div>
+          <label class="form-label text-muted" style="font-size: 0.8rem; font-weight: 600;">Data Início</label>
+          <input type="date" name="data_inicio" class="form-control form-control-sm shadow-none" style="border-color: #dee2e6;" value="{{ request.args.get('data_inicio', '') }}">
+        </div>
+        
+        <div>
+          <label class="form-label text-muted" style="font-size: 0.8rem; font-weight: 600;">Data Fim</label>
+          <input type="date" name="data_fim" class="form-control form-control-sm shadow-none" style="border-color: #dee2e6;" value="{{ request.args.get('data_fim', '') }}">
+        </div>
+
+        <div class="d-flex gap-2">
+          <button type="submit" class="btn btn-sm" style="background-color: var(--sgd-navy); color: white; border-radius: 6px;">
+            <i class="bi bi-funnel me-1"></i>Filtrar
+          </button>
+          <a href="{{ url_for('admin.auditoria') }}" class="btn btn-sm btn-light border" style="border-radius: 6px; color: #4b5563;">
+            Limpar
+          </a>
+        </div>
+
+        <input type="hidden" name="per_page" id="perPageHidden" value="{{ request.args.get('per_page', 20) }}">
+      </form>
+    </div>
+  </div>
+
+  <div class="card-corp">
+    <div class="card-header-corp border-bottom-0 pb-0 pt-4 d-flex justify-content-between align-items-center">
+      <h6 class="mb-0 fw-bold" style="color: var(--sgd-navy);"><i class="bi bi-list-columns me-2 opacity-50"></i>Registros Recentes</h6>
+      
+      <div class="d-flex align-items-center gap-2 text-muted" style="font-size: 0.85rem;">
+        <label for="perPageSelect" class="mb-0 text-nowrap fw-medium">Exibir:</label>
+        <select id="perPageSelect" class="form-select form-select-sm shadow-none fluid-search-form" style="width: auto; border-radius: 6px; border-color: #dee2e6;" onchange="document.getElementById('perPageHidden').value = this.value; this.form.dispatchEvent(new Event('change'));">
+          <option value="20" {% if request.args.get('per_page', '20') == '20' %}selected{% endif %}>20 linhas</option>
+          <option value="50" {% if request.args.get('per_page') == '50' %}selected{% endif %}>50 linhas</option>
+          <option value="100" {% if request.args.get('per_page') == '100' %}selected{% endif %}>100 linhas</option>
         </select>
       </div>
+    </div>
 
-      <div>
-        <label class="form-label-corp d-block">Ação</label>
-        <select name="acao" class="form-select form-select-corp" style="width:160px;">
-          <option value="">Todas</option>
-          {% for a in acoes %}
-          <option value="{{ a }}" {% if filtro_acao == a %}selected{% endif %}>{{ a }}</option>
+    <div class="table-responsive mt-3 fluid-table-container" style="overflow-x: auto; transition: opacity 0.2s;">
+      <table class="table-corp">
+        <thead>
+          <tr>
+            <th style="width: 60px;">#</th>
+            <th style="width: 150px;">Data/Hora</th>
+            <th style="width: 180px;">Ator</th>
+            <th style="width: 120px;">Ação</th>
+            <th>Módulo</th>
+            <th style="text-align: center;">ID Reg.</th>
+            <th style="width: 30%;">Dados Alterados</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for r in registros.items %}
+          <tr style="vertical-align: middle;">
+            <td style="color:#9ca3af;font-size:.75rem; font-weight: 500;">{{ r.id }}</td>
+            <td style="font-size:.8rem;color:#4b5563;">
+              {{ r.data_hora.strftime('%d/%m/%Y') }} <span class="text-muted ms-1">{{ r.data_hora.strftime('%H:%M:%S') }}</span>
+            </td>
+            <td>
+              <div class="d-flex align-items-center gap-2">
+                {% if r.ator %}
+                  <div class="rounded-circle d-flex align-items-center justify-content-center fw-bold" style="width: 28px; height: 28px; background-color: var(--sgd-bg); color: var(--sgd-blue); font-size: 0.75rem;">
+                    {{ r.ator.nome[0]|upper }}
+                  </div>
+                  <div style="line-height: 1.2;">
+                    <span class="d-block" style="font-size: 0.85rem; font-weight: 600; color: var(--sgd-navy);">{{ r.ator.nome.split()[0] }}</span>
+                    <span style="font-size:.65rem; color:#9ca3af; text-transform: capitalize;">{{ r.ator.perfil }}</span>
+                  </div>
+                {% else %}
+                  <div class="rounded-circle d-flex align-items-center justify-content-center fw-bold bg-secondary text-white" style="width: 28px; height: 28px; font-size: 0.75rem;">
+                    <i class="bi bi-robot"></i>
+                  </div>
+                  <span style="font-size: 0.85rem; font-weight: 600; color: #6b7280;">Sistema</span>
+                {% endif %}
+              </div>
+            </td>
+            <td>
+              {% set acao_colors = {
+                'CRIOU': 'success', 'EDITOU': 'primary', 'EXCLUIU': 'danger',
+                'STATUS': 'warning text-dark', 'LOGIN': 'info text-dark', 'LOGOUT': 'secondary', 'NEGADO': 'danger', 'REATIVOU': 'success', 'INATIVOU': 'danger'
+              } %}
+              <span class="badge bg-{{ acao_colors.get(r.acao, 'secondary') }}" style="font-size:.70rem; padding: 0.4em 0.6em; font-weight: 600;">
+                {{ mapa_acoes.get(r.acao, r.acao | capitalize) }}
+              </span>
+            </td>
+            <td style="font-size:.85rem; color:var(--sgd-navy); font-weight: 500;">
+              {{ mapa_tabelas.get(r.tabela_afetada, r.tabela_afetada | capitalize) }}
+            </td>
+            <td style="font-size:.85rem;color:#6b7280;text-align:center; font-weight: 600;">
+              {{ r.registro_id or '—' }}
+            </td>
+            <td>
+              {% if r.dados_json and r.dados_json != '{}' %}
+              <details>
+                <summary class="user-select-none" style="font-size:.75rem;color:var(--sgd-blue);cursor:pointer;list-style:none; font-weight: 500;">
+                  <i class="bi bi-braces me-1"></i>Ver JSON
+                </summary>
+                <pre style="font-size:.7rem;background:#f8fafc;border:1px solid #e2e8f0; border-radius:6px;padding:8px;margin-top:6px; white-space:pre-wrap;word-break:break-all;max-height:150px;overflow:auto; color: #0f172a;">{{ r.dados_json }}</pre>
+              </details>
+              {% else %}
+              <span style="color:#d1d5db;font-size:.75rem;">Sem dados adicionais</span>
+              {% endif %}
+            </td>
+          </tr>
+          {% else %}
+          <tr><td colspan="7">
+            <div class="empty-state">
+              <i class="bi bi-shield-x" style="font-size: 2.5rem; color: #d1d5db;"></i>
+              <p class="mt-2">Nenhum registro de auditoria encontrado com estes filtros.</p>
+            </div>
+          </td></tr>
           {% endfor %}
-        </select>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="fluid-pagination-container">
+      {% if registros.pages > 0 %}
+      <div class="card-header-corp bg-white border-top border-bottom-0 py-3 d-flex justify-content-between align-items-center">
+        <div class="text-muted" style="font-size: 0.85rem;">
+          Exibindo <strong style="color: var(--sgd-navy);">{{ registros.items|length }}</strong> de <strong>{{ registros.total }}</strong> registros
+        </div>
+        
+        <nav>
+          <ul class="pagination pagination-sm mb-0">
+            <li class="page-item {% if not registros.has_prev %}disabled{% endif %}">
+              <a class="page-link fluid-link text-secondary shadow-none border-0" 
+                 href="{{ url_for('admin.auditoria', page=registros.prev_num, tabela=request.args.get('tabela'), acao=request.args.get('acao'), data_inicio=request.args.get('data_inicio'), data_fim=request.args.get('data_fim'), per_page=request.args.get('per_page', 20)) if registros.has_prev else '#' }}"
+                 style="background-color: transparent;">
+                 <i class="bi bi-chevron-left"></i> Anterior
+              </a>
+            </li>
+            
+            <li class="page-item disabled d-none d-sm-block">
+              <span class="page-link text-dark fw-bold border-0" style="background-color: transparent;">
+                Página {{ registros.page }} de {{ registros.pages }}
+              </span>
+            </li>
+
+            <li class="page-item {% if not registros.has_next %}disabled{% endif %}">
+              <a class="page-link fluid-link text-secondary shadow-none border-0" 
+                 href="{{ url_for('admin.auditoria', page=registros.next_num, tabela=request.args.get('tabela'), acao=request.args.get('acao'), data_inicio=request.args.get('data_inicio'), data_fim=request.args.get('data_fim'), per_page=request.args.get('per_page', 20)) if registros.has_next else '#' }}"
+                 style="background-color: transparent;">
+                 Próxima <i class="bi bi-chevron-right"></i>
+              </a>
+            </li>
+          </ul>
+        </nav>
       </div>
+      {% endif %}
+    </div>
 
-      <button type="submit" class="btn-corp-primary">
-        <i class="bi bi-funnel me-1"></i>Filtrar
-      </button>
-      <a href="{{ url_for('admin.auditoria') }}"
-         style="padding:7px 14px;border:1px solid #d1d5db;border-radius:6px;
-                font-size:.83rem;font-weight:500;text-decoration:none;color:#374151;background:#fff;">
-        Limpar
-      </a>
-
-    </form>
   </div>
 </div>
-
-<div class="card-corp">
-  <div class="card-header-corp">
-    <h6><i class="bi bi-list-columns me-2 opacity-50"></i>Registros de Auditoria</h6>
-    <span style="font-size:.72rem;color:#9ca3af;">
-      {{ registros.total }} registro(s) total · página {{ registros.page }}/{{ registros.pages }}
-    </span>
-  </div>
-
-  <div class="table-responsive">
-    <table class="table-corp">
-      <thead>
-        <tr>
-          <th>#</th>
-          <th>Data/Hora</th>
-          <th>Ator</th>
-          <th>Ação</th>
-          <th>Tabela</th>
-          <th>ID Reg.</th>
-          <th>Dados</th>
-        </tr>
-      </thead>
-      <tbody>
-        {% for r in registros.items %}
-        <tr>
-          <td style="color:#9ca3af;font-size:.72rem;">#{{ r.id }}</td>
-          <td style="font-size:.75rem;color:#6b7280;white-space:nowrap;">
-            {{ r.data_hora.strftime('%d/%m/%Y %H:%M:%S') }}
-          </td>
-          <td style="font-size:.8rem;">
-            {% if r.ator %}
-              {{ r.ator.nome.split()[0] }}
-              <span style="font-size:.68rem;color:#9ca3af;">· {{ r.ator.perfil }}</span>
-            {% else %}
-              <span style="color:#9ca3af;">Sistema</span>
-            {% endif %}
-          </td>
-          <td>
-            {% set acao_colors = {
-              'CRIOU': '#16a34a', 'EDITOU': '#1d5fa6', 'EXCLUIU': '#dc2626',
-              'STATUS': '#d97706', 'LOGIN': '#7c3aed', 'LOGOUT': '#6b7280', 'NEGADO': '#dc2626'
-            } %}
-            <span style="font-size:.72rem;font-weight:700;
-                         color:{{ acao_colors.get(r.acao, '#374151') }};">
-              {{ r.acao }}
-            </span>
-          </td>
-          <td style="font-size:.75rem;color:#6b7280;font-family:monospace;">{{ r.tabela_afetada }}</td>
-          <td style="font-size:.78rem;color:#9ca3af;text-align:center;">
-            {{ r.registro_id or '—' }}
-          </td>
-          <td style="max-width:260px;">
-            {% if r.dados_json %}
-            <details>
-              <summary style="font-size:.72rem;color:#1d5fa6;cursor:pointer;list-style:none;">
-                <i class="bi bi-code-square me-1"></i>Ver JSON
-              </summary>
-              <pre style="font-size:.65rem;background:#f8fafc;border:1px solid #e2e8f0;
-                          border-radius:4px;padding:6px 8px;margin-top:4px;
-                          white-space:pre-wrap;word-break:break-all;max-height:120px;overflow:auto;">{{ r.dados_json }}</pre>
-            </details>
-            {% else %}
-            <span style="color:#d1d5db;font-size:.72rem;">—</span>
-            {% endif %}
-          </td>
-        </tr>
-        {% else %}
-        <tr><td colspan="7">
-          <div class="empty-state"><i class="bi bi-shield"></i><p>Nenhum registro de auditoria.</p></div>
-        </td></tr>
-        {% endfor %}
-      </tbody>
-    </table>
-  </div>
-
-  <!-- Paginação -->
-  {% if registros.pages > 1 %}
-  <div style="padding:12px 16px;border-top:1px solid #f0f2f5;display:flex;gap:6px;justify-content:center;">
-    {% if registros.has_prev %}
-    <a href="{{ url_for('admin.auditoria', page=registros.prev_num, tabela=filtro_tabela, acao=filtro_acao) }}"
-       style="padding:4px 12px;border:1px solid #d1d5db;border-radius:5px;
-              font-size:.78rem;text-decoration:none;color:#374151;">
-      ← Anterior
-    </a>
-    {% endif %}
-    <span style="padding:4px 12px;font-size:.78rem;color:#9ca3af;">
-      {{ registros.page }} / {{ registros.pages }}
-    </span>
-    {% if registros.has_next %}
-    <a href="{{ url_for('admin.auditoria', page=registros.next_num, tabela=filtro_tabela, acao=filtro_acao) }}"
-       style="padding:4px 12px;border:1px solid #d1d5db;border-radius:5px;
-              font-size:.78rem;text-decoration:none;color:#374151;">
-      Próxima →
-    </a>
-    {% endif %}
-  </div>
-  {% endif %}
-
-</div>
-
 {% endblock %}

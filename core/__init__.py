@@ -2,16 +2,14 @@ import os
 from datetime import datetime
 from dotenv import load_dotenv
 from flask import Flask
-
 from core.extensions import db, login_manager
 from core.models import Usuario, SolicitacaoMaterial, SolicitacaoManutencao
+from core.extensions import db, login_manager, csrf, limiter
 
 def create_app():
     load_dotenv()
     base_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
-    app = Flask(__name__, 
-                template_folder=os.path.join(base_dir, 'templates'),
-                static_folder=os.path.join(base_dir, 'static'))
+    app = Flask(__name__, template_folder='../templates', static_folder='../static')
 
     app.config.update(
         SECRET_KEY=os.getenv('FLASK_SECRET_KEY', 'dev-key'),
@@ -26,6 +24,8 @@ def create_app():
     db.init_app(app)
     login_manager.init_app(app)
     login_manager.login_view = 'auth.login'
+    csrf.init_app(app)
+    limiter.init_app(app)
 
     # --- Filtros e Contextos Globais ---
     @app.template_filter('smart_title')

@@ -81,7 +81,7 @@
       </div>
       <div class="card-body-corp">
         <form method="POST" action="{{ url_for('auth.perfil') }}" style="max-width:440px;">
-
+         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
           <div class="mb-3">
             <label class="form-label-corp">Senha Atual <span style="color:#e53e3e;">*</span></label>
             <input type="password" name="senha_atual"

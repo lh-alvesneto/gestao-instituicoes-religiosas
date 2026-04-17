@@ -197,6 +197,7 @@
       <div class="modal-footer border-0 pt-0">
         <button type="button" class="btn btn-light" data-bs-dismiss="modal" style="font-weight: 600; font-size: 0.85rem;">Cancelar</button>
         <form id="deleteManutencaoForm" method="POST" action="">
+         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
           <button type="submit" class="btn btn-danger" style="font-weight: 600; font-size: 0.85rem; border-radius: 6px;">Excluir Chamado</button>
         </form>
       </div>
