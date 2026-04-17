@@ -188,7 +188,7 @@
           {% endif %}
         {% endwith %}
 
-        <form method="POST" action="{{ url_for('login') }}">
+        <form method="POST" action="{{ url_for('auth.login') }}">
           <div class="form-group">
             <label>E-mail de acesso</label>
             <input type="email" name="email" class="form-input"

@@ -8,7 +8,7 @@
 <!-- Filtros -->
 <div class="card-corp mb-3">
   <div class="card-body-corp">
-    <form method="GET" action="{{ url_for('auditoria') }}" class="d-flex flex-wrap gap-2 align-items-end">
+    <form method="GET" action="{{ url_for('admin.auditoria') }}" class="d-flex flex-wrap gap-2 align-items-end">
 
       <div>
         <label class="form-label-corp d-block">Tabela</label>
@@ -33,7 +33,7 @@
       <button type="submit" class="btn-corp-primary">
         <i class="bi bi-funnel me-1"></i>Filtrar
       </button>
-      <a href="{{ url_for('auditoria') }}"
+      <a href="{{ url_for('admin.auditoria') }}"
          style="padding:7px 14px;border:1px solid #d1d5db;border-radius:6px;
                 font-size:.83rem;font-weight:500;text-decoration:none;color:#374151;background:#fff;">
         Limpar
@@ -121,7 +121,7 @@
   {% if registros.pages > 1 %}
   <div style="padding:12px 16px;border-top:1px solid #f0f2f5;display:flex;gap:6px;justify-content:center;">
     {% if registros.has_prev %}
-    <a href="{{ url_for('auditoria', page=registros.prev_num, tabela=filtro_tabela, acao=filtro_acao) }}"
+    <a href="{{ url_for('admin.auditoria', page=registros.prev_num, tabela=filtro_tabela, acao=filtro_acao) }}"
        style="padding:4px 12px;border:1px solid #d1d5db;border-radius:5px;
               font-size:.78rem;text-decoration:none;color:#374151;">
       ← Anterior
@@ -131,7 +131,7 @@
       {{ registros.page }} / {{ registros.pages }}
     </span>
     {% if registros.has_next %}
-    <a href="{{ url_for('auditoria', page=registros.next_num, tabela=filtro_tabela, acao=filtro_acao) }}"
+    <a href="{{ url_for('admin.auditoria', page=registros.next_num, tabela=filtro_tabela, acao=filtro_acao) }}"
        style="padding:4px 12px;border:1px solid #d1d5db;border-radius:5px;
               font-size:.78rem;text-decoration:none;color:#374151;">
       Próxima →

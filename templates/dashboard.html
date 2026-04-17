@@ -75,7 +75,7 @@
       <div class="card-corp h-100">
         <div class="card-header-corp d-flex justify-content-between align-items-center">
           <h6 class="mb-0"><i class="bi bi-box-seam me-2" style="color: var(--sgd-blue);"></i>Materiais Recentes</h6>
-          <a href="{{ url_for('materiais') }}" class="btn btn-sm btn-link text-decoration-none" style="font-size: 0.8rem; font-weight: 600;">Ver todos</a>
+          <a href="{{ url_for('materiais.lista') }}" class="btn btn-sm btn-link text-decoration-none" style="font-size: 0.8rem; font-weight: 600;">Ver todos</a>
         </div>
         
         <div class="table-responsive px-4 pb-4 pt-2">
@@ -93,7 +93,7 @@
               <tr style="vertical-align: middle;">
                 
                 <td class="text-start" style="width: 100%; max-width: 200px;">
-                  <a href="{{ url_for('detalhe_material', mid=s.id) }}" class="d-block text-truncate fw-bold text-decoration-none" style="color: var(--sgd-navy); font-size: 0.9rem;" title="{{ s.nome_material }}">
+                  <a href="{{ url_for('materiais.detalhe', mid=s.id) }}" class="d-block text-truncate fw-bold text-decoration-none" style="color: var(--sgd-navy); font-size: 0.9rem;" title="{{ s.nome_material }}">
                     {{ s.nome_material }}
                   </a>
                   <span class="d-block mt-1" style="font-size: 0.75rem; color: #9ca3af;">{{ s.data_criacao.strftime('%d/%m/%Y') }}</span>
@@ -121,7 +121,7 @@
       <div class="card-corp h-100">
         <div class="card-header-corp d-flex justify-content-between align-items-center">
           <h6 class="mb-0"><i class="bi bi-tools me-2" style="color: var(--sgd-blue);"></i>Manutenções Recentes</h6>
-          <a href="{{ url_for('manutencao') }}" class="btn btn-sm btn-link text-decoration-none" style="font-size: 0.8rem; font-weight: 600;">Ver todos</a>
+          <a href="{{ url_for('manutencao.lista') }}" class="btn btn-sm btn-link text-decoration-none" style="font-size: 0.8rem; font-weight: 600;">Ver todos</a>
         </div>
         
         <div class="table-responsive px-4 pb-4 pt-2">
@@ -139,7 +139,7 @@
               <tr style="vertical-align: middle;">
                 
                 <td class="text-start" style="width: 100%; max-width: 200px;">
-                  <a href="{{ url_for('detalhe_chamado', cid=m.id) }}" class="d-block text-truncate fw-bold text-decoration-none" style="color: var(--sgd-navy); font-size: 0.9rem;" title="{{ m.local }}">
+                  <a href="{{ url_for('manutencao.detalhe', cid=m.id) }}" class="d-block text-truncate fw-bold text-decoration-none" style="color: var(--sgd-navy); font-size: 0.9rem;" title="{{ m.local }}">
                     {{ m.local }}
                   </a>
                   <span class="d-block mt-1" style="font-size: 0.75rem; color: #9ca3af;">{{ m.data_criacao.strftime('%d/%m/%Y') }}</span>

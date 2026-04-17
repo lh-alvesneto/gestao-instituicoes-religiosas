@@ -14,7 +14,7 @@
     </div>
     
     <div>
-      <a href="{{ url_for('novo_material') }}" class="btn-corp-primary">
+      <a href="{{ url_for('materiais.novo') }}" class="btn-corp-primary">
         <i class="bi bi-plus-lg me-1"></i> Nova Solicitação
       </a>
     </div>
@@ -23,7 +23,7 @@
   <div class="card-corp">
     
     <div class="card-header-corp border-bottom-0 pb-0 pt-4 d-flex justify-content-between align-items-center flex-wrap gap-3">
-      <form id="searchForm" method="GET" action="{{ url_for('materiais') }}" style="flex: 1; max-width: 400px;">
+      <form id="searchForm" method="GET" action="{{ url_for('materiais.lista') }}" style="flex: 1; max-width: 400px;">
         <div class="input-group">
           <span class="input-group-text bg-white border-end-0 text-muted" style="border-radius: 8px 0 0 8px;">
             <i class="bi bi-search"></i>
@@ -65,7 +65,7 @@
             <td style="text-align: center; color: #9ca3af; font-size: 0.8rem;">#{{ s.id }}</td>
             
             <td>
-              <a href="{{ url_for('detalhe_material', mid=s.id) }}" 
+              <a href="{{ url_for('materiais.detalhe', mid=s.id) }}" 
                  class="d-block fw-bold text-decoration-none" 
                  style="color: var(--sgd-navy); transition: color 0.2s;"
                  onmouseover="this.style.color='var(--sgd-blue)'"
@@ -96,11 +96,11 @@
                   </button>
                   <ul class="dropdown-menu dropdown-menu-end shadow-sm" style="font-size: 0.85rem; border-radius: 8px;">
                     <li><h6 class="dropdown-header">Alterar Status</h6></li>
-                    <li><a class="dropdown-item" href="{{ url_for('status_material', mid=s.id, novo_status='pendente') }}"><span style="color:#b45309">●</span> Pendente</a></li>
-                    <li><a class="dropdown-item" href="{{ url_for('status_material', mid=s.id, novo_status='aprovado') }}"><span style="color:#156941">●</span> Aprovado</a></li>
-                    <li><a class="dropdown-item" href="{{ url_for('status_material', mid=s.id, novo_status='entregue') }}"><span style="color:#156941">●</span> Entregue</a></li>
+                    <li><a class="dropdown-item" href="{{ url_for('materiais.alterar_status', mid=s.id, novo_status='pendente') }}"><span style="color:#b45309">●</span> Pendente</a></li>
+                    <li><a class="dropdown-item" href="{{ url_for('materiais.alterar_status', mid=s.id, novo_status='aprovado') }}"><span style="color:#156941">●</span> Aprovado</a></li>
+                    <li><a class="dropdown-item" href="{{ url_for('materiais.alterar_status', mid=s.id, novo_status='entregue') }}"><span style="color:#156941">●</span> Entregue</a></li>
                     <li><hr class="dropdown-divider"></li>
-                    <li><a class="dropdown-item text-danger" href="{{ url_for('status_material', mid=s.id, novo_status='cancelado') }}">Cancelar Pedido</a></li>
+                    <li><a class="dropdown-item text-danger" href="{{ url_for('materiais.alterar_status', mid=s.id, novo_status='cancelado') }}">Cancelar Pedido</a></li>
                   </ul>
                 </div>
               {% else %}
@@ -111,7 +111,7 @@
             <td style="text-align: center;">
               <div class="d-flex justify-content-center gap-2"> 
                 {% if s.status == 'pendente' %}
-                  <a href="{{ url_for('editar_material', mid=s.id) }}" 
+                  <a href="{{ url_for('materiais.editar', mid=s.id) }}" 
                      class="btn btn-sm btn-light border btn-action" title="Editar Pedido">
                     <i class="bi bi-pencil"></i>
                   </a>
@@ -149,7 +149,7 @@
       <nav>
         <ul class="pagination pagination-sm mb-0">
           <li class="page-item {% if not lista.has_prev %}disabled{% endif %}">
-            <a class="page-link text-secondary shadow-none border-0" href="{{ url_for('materiais', page=lista.prev_num, q=termo, per_page=per_page) if lista.has_prev else '#' }}" style="background-color: transparent;">
+            <a class="page-link text-secondary shadow-none border-0" href="{{ url_for('materiais.lista', page=lista.prev_num, q=termo, per_page=per_page) if lista.has_prev else '#' }}" style="background-color: transparent;">
                <i class="bi bi-chevron-left"></i> Anterior
             </a>
           </li>
@@ -157,7 +157,7 @@
             <span class="page-link text-dark fw-bold border-0" style="background-color: transparent;">Página {{ lista.page }} de {{ lista.pages }}</span>
           </li>
           <li class="page-item {% if not lista.has_next %}disabled{% endif %}">
-            <a class="page-link text-secondary shadow-none border-0" href="{{ url_for('materiais', page=lista.next_num, q=termo, per_page=per_page) if lista.has_next else '#' }}" style="background-color: transparent;">
+            <a class="page-link text-secondary shadow-none border-0" href="{{ url_for('materiais.lista', page=lista.next_num, q=termo, per_page=per_page) if lista.has_next else '#' }}" style="background-color: transparent;">
                Próxima <i class="bi bi-chevron-right"></i>
             </a>
           </li>

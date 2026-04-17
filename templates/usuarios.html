@@ -14,7 +14,7 @@
     </div>
     
     <div>
-      <a href="{{ url_for('novo_usuario') }}" class="btn-corp-primary">
+      <a href="{{ url_for('admin.novo_usuario') }}" class="btn-corp-primary">
         <i class="bi bi-plus-lg me-1"></i> Novo Usuário
       </a>
     </div>
@@ -24,7 +24,7 @@
     
     <div class="card-header-corp border-bottom-0 pb-0 pt-4 d-flex justify-content-between align-items-center flex-wrap gap-3">
       
-      <form id="searchForm" method="GET" action="{{ url_for('lista_usuarios') }}" style="flex: 1; max-width: 400px;">
+      <form id="searchForm" method="GET" action="{{ url_for('admin.lista_usuarios') }}" style="flex: 1; max-width: 400px;">
         <div class="input-group">
           <span class="input-group-text bg-white border-end-0 text-muted" style="border-radius: 8px 0 0 8px;">
             <i class="bi bi-search"></i>
@@ -137,7 +137,7 @@
         <ul class="pagination pagination-sm mb-0">
           <li class="page-item {% if not usuarios.has_prev %}disabled{% endif %}">
             <a class="page-link text-secondary shadow-none border-0" 
-               href="{{ url_for('lista_usuarios', page=usuarios.prev_num, q=termo, per_page=per_page) if usuarios.has_prev else '#' }}"
+               href="{{ url_for('admin.lista_usuarios', page=usuarios.prev_num, q=termo, per_page=per_page) if usuarios.has_prev else '#' }}"
                style="background-color: transparent;">
                <i class="bi bi-chevron-left"></i> Anterior
             </a>
@@ -151,7 +151,7 @@
 
           <li class="page-item {% if not usuarios.has_next %}disabled{% endif %}">
             <a class="page-link text-secondary shadow-none border-0" 
-               href="{{ url_for('lista_usuarios', page=usuarios.next_num, q=termo, per_page=per_page) if usuarios.has_next else '#' }}"
+               href="{{ url_for('admin.lista_usuarios', page=usuarios.next_num, q=termo, per_page=per_page) if usuarios.has_next else '#' }}"
                style="background-color: transparent;">
                Próxima <i class="bi bi-chevron-right"></i>
             </a>

@@ -451,22 +451,22 @@
     
     <ul class="nav-menu">
       <li class="nav-item">
-        <a href="{{ url_for('dashboard') }}" class="nav-link {% if request.endpoint == 'dashboard' %}active{% endif %}">
+        <a href="{{ url_for('dashboard.index') }}" class="nav-link {% if request.endpoint == 'dashboard.index' %}active{% endif %}">
           <i class="bi bi-grid-1x2"></i> <span class="menu-text">Painel de Controle</span>
         </a>
       </li>
       <li class="nav-item">
-        <a href="{{ url_for('materiais') }}" class="nav-link {% if request.endpoint in ['materiais', 'novo_material', 'editar_material', 'detalhe_material'] %}active{% endif %}">
+        <a href="{{ url_for('materiais.lista') }}" class="nav-link {% if request.blueprint == 'materiais' %}active{% endif %}">
           <i class="bi bi-box-seam"></i> <span class="menu-text">Materiais</span>
         </a>
       </li>
       <li class="nav-item">
-        <a href="{{ url_for('manutencao') }}" class="nav-link {% if request.endpoint in ['manutencao', 'novo_chamado', 'editar_chamado', 'detalhe_chamado'] %}active{% endif %}">
+        <a href="{{ url_for('manutencao.lista') }}" class="nav-link {% if request.blueprint == 'manutencao' %}active{% endif %}">
           <i class="bi bi-tools"></i> <span class="menu-text">Manutenção</span>
         </a>
       </li>
       <li class="nav-item">
-        <a href="{{ url_for('historico') }}" class="nav-link {% if request.endpoint == 'historico' %}active{% endif %}">
+        <a href="{{ url_for('dashboard.historico') }}" class="nav-link {% if request.endpoint == 'dashboard.historico' %}active{% endif %}">
           <i class="bi bi-clock-history"></i> <span class="menu-text">Histórico</span>
         </a>
       </li>
@@ -476,7 +476,7 @@
         <span class="ps-4 text-uppercase menu-header-text" style="color: #4DA186; font-size: 0.65rem; font-weight: 800; letter-spacing: 1px;">Gestão</span>
       </li>
       <li class="nav-item">
-        <a href="{{ url_for('lista_usuarios') }}" class="nav-link {% if request.endpoint in ['lista_usuarios', 'novo_usuario'] %}active{% endif %}">
+        <a href="{{ url_for('admin.lista_usuarios') }}" class="nav-link {% if request.blueprint == 'admin' and request.endpoint != 'admin.auditoria' %}active{% endif %}">
           <i class="bi bi-people"></i> <span class="menu-text">Usuários</span>
         </a>
       </li>
@@ -484,7 +484,7 @@
       
       {% if current_user.is_admin %}
       <li class="nav-item">
-        <a href="{{ url_for('auditoria') }}" class="nav-link {% if request.endpoint == 'auditoria' %}active{% endif %}">
+        <a href="{{ url_for('admin.auditoria') }}" class="nav-link {% if request.endpoint == 'admin.auditoria' %}active{% endif %}">
           <i class="bi bi-shield-check"></i> <span class="menu-text">Auditoria</span>
         </a>
       </li>
@@ -497,15 +497,14 @@
         <span class="badge-perfil {{ current_user.perfil }}">{{ current_user.perfil }}</span>
       </div>
       <div class="mt-3 d-flex gap-2 btn-group-full user-info-text">
-        <a href="{{ url_for('perfil') }}" class="btn btn-sm btn-outline-light w-50">Perfil</a>
-        <a href="{{ url_for('logout') }}" class="btn btn-sm btn-outline-danger w-50">Sair</a>
+        <a href="{{ url_for('auth.perfil') }}" class="btn btn-sm btn-outline-light w-50">Perfil</a>
+        <a href="{{ url_for('auth.logout') }}" class="btn btn-sm btn-outline-danger w-50">Sair</a>
       </div>
       
-      <a href="{{ url_for('logout') }}" class="btn-logout-compact" title="Sair do Sistema">
+      <a href="{{ url_for('auth.logout') }}" class="btn-logout-compact" title="Sair do Sistema">
         <i class="bi bi-box-arrow-right" style="font-size: 1.5rem;"></i>
       </a>
     </div>
-  </nav>
 
   <main class="main-wrapper">
     

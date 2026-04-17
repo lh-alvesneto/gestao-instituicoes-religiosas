@@ -6,7 +6,7 @@
 <div class="container-fluid p-0">
 
   <div class="mb-4">
-    <a href="{{ url_for('manutencao') }}" class="text-decoration-none mb-2 d-inline-block" style="color: #6b7280; font-size: 0.85rem; font-weight: 600;">
+    <a href="{{ url_for('manutencao.lista') }}" class="text-decoration-none mb-2 d-inline-block" style="color: #6b7280; font-size: 0.85rem; font-weight: 600;">
       <i class="bi bi-arrow-left me-1"></i> Voltar para Manutenção
     </a>
     <h1 class="h3 mb-0" style="font-weight: 800; color: var(--sgd-navy);">
@@ -25,7 +25,7 @@
         </div>
         
         <div class="p-4">
-          <form method="POST" action="{{ url_for('editar_chamado', cid=chamado.id) if editando else url_for('novo_chamado') }}" enctype="multipart/form-data">
+          <form method="POST" action="{{ url_for('manutencao.editar', cid=chamado.id) if editando else url_for('manutencao.novo') }}" enctype="multipart/form-data">
             
             <div class="row mb-4">
               <div class="col-12 mb-4">
@@ -94,7 +94,7 @@
             {% endif %}
 
             <div class="d-flex justify-content-end gap-3 mt-4 pt-4 border-top">
-              <a href="{{ url_for('manutencao') }}" class="btn btn-light" style="font-weight: 600; font-size: 0.9rem; padding: 10px 20px; color: #4b5563; border-color: #d1d5db;">
+              <a href="{{ url_for('manutencao.lista') }}" class="btn btn-light" style="font-weight: 600; font-size: 0.9rem; padding: 10px 20px; color: #4b5563; border-color: #d1d5db;">
                 Cancelar
               </a>
               <button type="submit" class="btn-corp-primary d-flex align-items-center gap-2" style="font-size: 0.9rem; padding: 10px 20px; border: none; box-shadow: none;">
