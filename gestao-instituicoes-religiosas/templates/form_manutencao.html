@@ -1,0 +1,159 @@
+{% extends "base.html" %}
+
+{% block title %}{% if editando %}Editar Chamado{% else %}Novo Chamado de Manutenção{% endif %} — IPVP{% endblock %}
+
+{% block content %}
+<div class="container-fluid p-0">
+
+  <div class="mb-4">
+    <a href="{{ url_for('manutencao.lista') }}" class="text-decoration-none mb-2 d-inline-block" style="color: #6b7280; font-size: 0.85rem; font-weight: 600;">
+      <i class="bi bi-arrow-left me-1"></i> Voltar para Manutenção
+    </a>
+    <h1 class="h3 mb-0" style="font-weight: 800; color: var(--sgd-navy);">
+      <i class="bi {% if editando %}bi-pencil-square{% else %}bi-tools{% endif %} me-2" style="color: var(--sgd-blue);"></i>
+      {% if editando %}Editar Chamado{% else %}Novo Chamado de Manutenção{% endif %}
+    </h1>
+  </div>
+
+  <div class="row">
+    <div class="col-12 col-xl-6 col-lg-8"> 
+      
+      <div class="card-corp">
+        <div class="card-header-corp d-flex align-items-center gap-2">
+          <i class="bi {% if editando %}bi-pencil{% else %}bi-exclamation-circle{% endif %} text-muted"></i>
+          <h6 class="mb-0">{% if editando %}Atualize os detalhes da ocorrência{% else %}Detalhes da Ocorrência{% endif %}</h6>
+        </div>
+        
+        <div class="p-4">
+          <form method="POST" action="{{ url_for('manutencao.editar', cid=chamado.id) if editando else url_for('manutencao.novo') }}" enctype="multipart/form-data">
+            
+            <div class="row mb-4">
+              <div class="col-12 mb-4">
+                <label for="local" class="form-label-corp">Local / Setor <span class="text-danger">*</span></label>
+                <input type="text" class="form-control input-corp" id="local" name="local" 
+                       placeholder="Ex: Templo Principal, Cozinha..." 
+                       value="{{ chamado.local if editando else '' }}" required autofocus>
+              </div>
+              
+              <div class="col-12">
+                <label class="form-label-corp d-block">Urgência <span class="text-danger">*</span></label>
+                <div class="d-flex gap-2">
+                  
+                  {% set urg = chamado.urgencia if editando else 'media' %}
+                  
+                  <label for="urg_baixa" class="chip-label">
+                    <input type="radio" name="urgencia" id="urg_baixa" value="baixa" class="chip-input" {% if urg == 'baixa' %}checked{% endif %}>
+                    <span class="chip-btn baixa">Baixa</span>
+                  </label>
+
+                  <label for="urg_media" class="chip-label">
+                    <input type="radio" name="urgencia" id="urg_media" value="media" class="chip-input" {% if urg == 'media' %}checked{% endif %}>
+                    <span class="chip-btn media">Média</span>
+                  </label>
+
+                  <label for="urg_alta" class="chip-label">
+                    <input type="radio" name="urgencia" id="urg_alta" value="alta" class="chip-input" {% if urg == 'alta' %}checked{% endif %}>
+                    <span class="chip-btn alta">Alta</span>
+                  </label>
+
+                </div>
+              </div>
+            </div>
+            
+            <div class="mb-4">
+              <label for="descricao" class="form-label-corp">Descrição do Problema <span class="text-danger">*</span></label>
+              <textarea class="form-control input-corp" id="descricao" name="descricao" 
+                        rows="4" placeholder="Descreva detalhadamente o que precisa de reparo..." required>{{ chamado.descricao if editando else '' }}</textarea>
+            </div>
+
+            <div class="mb-4">
+              <label class="form-label-corp d-block">{% if editando %}Anexar Novas Fotos (Opcional){% else %}Anexar Fotos (Opcional){% endif %}</label>
+              
+              <label for="imagens" class="upload-zone">
+                <div class="upload-content">
+                  <i class="bi bi-cloud-arrow-up text-muted"></i>
+                  <span class="upload-title">Clique para selecionar fotos</span>
+                  <span class="upload-subtitle">Ou arraste e solte os arquivos aqui</span>
+                </div>
+              </label>
+              
+              <input type="file" class="d-none" id="imagens" name="imagens" accept="image/*" multiple>
+              
+              <div id="file-list" class="mt-3 d-flex flex-wrap gap-2"></div>
+              <div class="form-text mt-2" style="font-size: 0.75rem;">
+                <i class="bi bi-info-circle me-1"></i> Máximo de 3 fotos (até 5MB cada).
+              </div>
+            </div>
+
+            {% if editando and current_user.pode_gerenciar %}
+            <div class="mb-4 p-3 rounded" style="background-color: #fef2f2; border: 1px solid #fca5a5;">
+              <label for="justificativa_edicao" class="form-label-corp text-danger" style="font-weight: 700;">Motivo da Edição (Auditoria) <span class="text-danger">*</span></label>
+              <input type="text" class="form-control input-corp" id="justificativa_edicao" name="justificativa_edicao" 
+                     placeholder="Ex: Ajuste de urgência, correção de local..." required>
+            </div>
+            {% endif %}
+
+            <div class="d-flex justify-content-end gap-3 mt-4 pt-4 border-top">
+              <a href="{{ url_for('manutencao.lista') }}" class="btn btn-light" style="font-weight: 600; font-size: 0.9rem; padding: 10px 20px; color: #4b5563; border-color: #d1d5db;">
+                Cancelar
+              </a>
+              <button type="submit" class="btn-corp-primary d-flex align-items-center gap-2" style="font-size: 0.9rem; padding: 10px 20px; border: none; box-shadow: none;">
+                <i class="bi {% if editando %}bi-check-lg{% else %}bi-check-lg{% endif %}"></i> 
+                {% if editando %}Salvar Alterações{% else %}Abrir Chamado{% endif %}
+              </button>
+            </div>
+            
+          </form>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+</div>
+
+<style>
+  .chip-label { cursor: pointer; margin: 0; }
+  .chip-input { display: none; }
+  .chip-btn {
+    display: inline-block; padding: 6px 14px; border-radius: 50px; font-size: 0.75rem;
+    font-weight: 700; text-transform: uppercase; background: #f3f4f6; color: #6b7280;
+    border: 2px solid transparent; transition: all 0.2s ease;
+  }
+  .chip-btn:hover { background: #e5e7eb; }
+  .chip-input:checked + .chip-btn.baixa { background: #dcfce7; color: #16a34a; border-color: #16a34a; }
+  .chip-input:checked + .chip-btn.media { background: #fef3c7; color: #d97706; border-color: #d97706; }
+  .chip-input:checked + .chip-btn.alta  { background: #fee2e2; color: #dc2626; border-color: #dc2626; }
+  .upload-zone {
+    display: block; width: 100%; padding: 2rem; border: 2px dashed #d1d5db; border-radius: 12px;
+    background: #f9fafb; cursor: pointer; transition: all 0.2s ease;
+  }
+  .upload-zone:hover { border-color: var(--sgd-light); background: #f0fdf4; }
+  .upload-content { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; }
+  .upload-content i { font-size: 2.2rem; }
+  .upload-title { font-weight: 700; color: var(--sgd-navy); font-size: 0.95rem; }
+  .upload-subtitle { color: #6b7280; font-size: 0.8rem; }
+  .file-badge {
+    background: #ffffff; border: 1px solid #d1d5db; color: #374151; padding: 6px 12px;
+    border-radius: 8px; font-size: 0.8rem; font-weight: 600; display: flex; align-items: center;
+    gap: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+  }
+</style>
+
+<script>
+  document.addEventListener('DOMContentLoaded', function () {
+    const fileInput = document.getElementById('imagens');
+    const fileList = document.getElementById('file-list');
+
+    fileInput.addEventListener('change', function() {
+      fileList.innerHTML = '';
+      Array.from(this.files).forEach(file => {
+        const badge = document.createElement('div');
+        badge.className = 'file-badge';
+        badge.innerHTML = `<i class="bi bi-image" style="color: var(--sgd-light);"></i> ${file.name}`;
+        fileList.appendChild(badge);
+      });
+    });
+  });
+</script>
+{% endblock %}

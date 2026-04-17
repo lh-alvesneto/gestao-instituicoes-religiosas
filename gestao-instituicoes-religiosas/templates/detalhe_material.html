@@ -1,0 +1,184 @@
+{% extends "base.html" %}
+
+{% block title %}Detalhes da Solicitação #{{ sol.id }} — IPVP{% endblock %}
+
+{% block content %}
+<div class="container-fluid p-0">
+
+  <nav aria-label="breadcrumb" class="mb-3">
+    <ol class="breadcrumb mb-0" style="font-size: 0.85rem; font-weight: 500;">
+      <li class="breadcrumb-item"><a href="{{ url_for('dashboard.index') }}" class="text-decoration-none text-muted"><i class="bi bi-house-door me-1"></i>Painel</a></li>
+      <li class="breadcrumb-item"><a href="{{ url_for('materiais.lista') }}" class="text-decoration-none text-muted">Materiais</a></li>
+      <li class="breadcrumb-item active text-dark" aria-current="page">Solicitação #{{ sol.id }}</li>
+    </ol>
+  </nav>
+
+  <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-3">
+    <h1 class="h3 mb-0" style="font-weight: 800; color: var(--sgd-navy);">
+      <i class="bi bi-box-seam me-2" style="color: var(--sgd-blue);"></i>Detalhes da Solicitação #{{ sol.id }}
+    </h1>
+    
+    <div class="d-flex gap-2">
+      {% if sol.status == 'pendente' %}
+        {% if current_user.is_usuario and sol.id_usuario == current_user.id or current_user.pode_gerenciar %}
+          <a href="{{ url_for('materiais.editar', mid=sol.id) }}" class="btn btn-light border d-flex align-items-center gap-2" style="font-weight: 600; font-size: 0.85rem; color: #4b5563;">
+            <i class="bi bi-pencil"></i> Editar
+          </a>
+        {% endif %}
+        
+        {% if current_user.pode_gerenciar %}
+          <a href="{{ url_for('materiais.alterar_status', mid=sol.id, novo_status='aprovado') }}" class="btn btn-success d-flex align-items-center gap-2 shadow-sm" style="font-weight: 600; font-size: 0.85rem;">
+            <i class="bi bi-check2-circle"></i> Aprovar Compra
+          </a>
+        {% endif %}
+      {% endif %}
+    </div>
+  </div>
+
+  <div class="row g-4">
+    
+    <div class="col-12 col-xl-4 col-lg-5">
+      <div class="card-corp h-100">
+        <div class="card-header-corp d-flex align-items-center gap-2">
+          <i class="bi bi-info-circle text-muted"></i>
+          <h6 class="mb-0">Informações da Solicitação</h6>
+        </div>
+        
+        <div class="p-4">
+          <div class="d-flex align-items-center border-bottom pb-3 mb-3">
+            <span class="text-muted fw-medium" style="width: 130px; font-size: 0.85rem; flex-shrink: 0;">Status</span>
+            <span class="status-pill status-{{ sol.status }} ms-auto">{{ sol.status | replace('_', ' ') }}</span>
+          </div>
+
+          <div class="d-flex align-items-center border-bottom pb-3 mb-3">
+            <span class="text-muted fw-medium" style="width: 130px; font-size: 0.85rem; flex-shrink: 0;">Material</span>
+            <span class="fw-bold text-dark text-truncate" title="{{ sol.nome_material }}" data-bs-toggle="tooltip" style="flex: 1; min-width: 0;">{{ sol.nome_material }}</span>
+          </div>
+
+          <div class="d-flex align-items-center border-bottom pb-3 mb-3">
+            <span class="text-muted fw-medium" style="width: 130px; font-size: 0.85rem; flex-shrink: 0;">Quantidade</span>
+            <span class="fw-bold" style="color: #4b5563;">{{ sol.quantidade }} un.</span>
+          </div>
+
+          <div class="d-flex align-items-center border-bottom pb-3 mb-3">
+            <span class="text-muted fw-medium" style="width: 130px; font-size: 0.85rem; flex-shrink: 0;">Solicitante</span>
+            <span class="fw-bold text-truncate" style="color: #4b5563; flex: 1; min-width: 0;" title="{{ sol.solicitante.nome }}">{{ sol.solicitante.nome | smart_title }}</span>
+          </div>
+
+          <div class="d-flex align-items-center pb-3 mb-3">
+            <span class="text-muted fw-medium" style="width: 130px; font-size: 0.85rem; flex-shrink: 0;">Data do Pedido</span>
+            <span class="fw-bold" style="color: #4b5563;">{{ sol.data_criacao.strftime('%d/%m/%Y às %H:%M') }}</span>
+          </div>
+
+          <div class="mt-2 p-3 bg-light rounded" style="border: 1px solid #e5e7eb;">
+            <span class="d-block text-muted fw-bold mb-1" style="font-size: 0.75rem; text-transform: uppercase;">Justificativa:</span>
+            <span class="text-break" style="font-size: 0.85rem; color: #4b5563; line-height: 1.5;">{{ sol.justificativa }}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-12 col-xl-8 col-lg-7">
+      <div class="card-corp h-100 d-flex flex-column" style="position: relative;">
+        
+        <div class="card-header-corp d-flex align-items-center gap-2">
+          <i class="bi bi-chat-left-text text-muted"></i>
+          <h6 class="mb-0">Acompanhamento e Histórico</h6>
+        </div>
+
+        <div class="p-4 flex-grow-1" style="background-color: #f9fafb; overflow-y: auto; max-height: 60vh; border-bottom: 1px solid #e5e7eb;">
+          {% if timeline %}
+            <div class="d-flex flex-column gap-3">
+              {% for item in timeline %}
+                
+                {% if item.acao is defined %}
+                  <div class="d-flex justify-content-center my-2">
+                    <span class="badge bg-white text-secondary border shadow-sm px-3 py-2 d-flex align-items-center gap-2" style="font-size: 0.75rem; font-weight: 500; border-radius: 20px;">
+                      <i class="bi bi-robot text-muted"></i>
+                      <span>
+                        <strong>{{ item.ator.nome.split()[0] if item.ator else 'Sistema' }}</strong> 
+                        {{ item.acao|lower }} a solicitação.
+                      </span>
+                      <span class="text-muted fw-normal ms-1">{{ item.data_hora.strftime('%d/%m %H:%M') }}</span>
+                    </span>
+                  </div>
+
+                {% elif item.texto is defined %}
+                  {% set is_me = (item.id_usuario == current_user.id) %}
+                  <div class="p-3 rounded shadow-sm border" style="border-color: {% if is_me %}#bbf7d0{% else %}#e5e7eb{% endif %}; background-color: {% if is_me %}#f0fdf4{% else %}#ffffff{% endif %};">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                      <strong style="color: var(--sgd-navy); font-size: 0.9rem;">
+                        <i class="bi bi-person-circle text-muted me-1"></i> 
+                        {% if is_me %}Você{% else %}{{ item.autor.nome.split()[0] | smart_title }}{% endif %}
+                        
+                        {% if item.autor.perfil == 'administrador' %}
+                          <span class="badge ms-1" style="background-color: var(--sgd-navy); color: #fff; font-size: 0.65rem;">Admin</span>
+                        {% elif item.autor.perfil == 'gestor' %}
+                          <span class="badge ms-1" style="background-color: #fef3c7; color: #d97706; font-size: 0.65rem;">Gestor</span>
+                        {% endif %}
+                      </strong>
+                      <span class="text-muted" style="font-size: 0.75rem;">{{ item.data_hora.strftime('%d/%m/%Y %H:%M') }}</span>
+                    </div>
+                    
+                    <div class="text-break" style="font-size: 0.85rem; color: #4b5563; line-height: 1.5;">
+                      {{ item.texto }}
+                    </div>
+                    
+                    {% if item.caminho_anexo %}
+                    <div class="mt-2 pt-2 border-top" style="border-color: rgba(0,0,0,0.05) !important;">
+                      <a href="{{ url_for('manutencao.serve_upload', filename=item.caminho_anexo) }}" target="_blank" class="d-inline-flex align-items-center gap-1 text-decoration-none" style="font-size: 0.75rem; color: var(--sgd-blue);">
+                        <i class="bi bi-file-earmark-text"></i> Ver documento anexado
+                      </a>
+                    </div>
+                    {% endif %}
+                  </div>
+                {% endif %}
+              {% endfor %}
+            </div>
+          {% else %}
+            <div class="text-center text-muted py-5">
+              <i class="bi bi-chat-square-dots fs-1 d-block mb-3" style="opacity: 0.3;"></i>
+              Nenhum registro no histórico.
+            </div>
+          {% endif %}
+        </div>
+
+        <div class="p-4 bg-white position-sticky bottom-0" style="border-radius: 0 0 12px 12px; z-index: 10;">
+          <form method="POST" action="{{ url_for('materiais.comentar', mid=sol.id) }}" class="d-flex flex-column gap-2enctype="multipart/form-data">
+            <textarea class="form-control input-corp shadow-none mb-2 text-break" name="texto" rows="3" placeholder="Escreva um comentário ou atualização sobre o pedido..." required></textarea>
+            
+            <div class="d-flex justify-content-between align-items-center">
+              
+              <label for="anexo_comentario" class="btn btn-light btn-sm text-muted border mb-0 d-flex align-items-center gap-2" style="cursor: pointer; transition: all 0.2s;">
+                <i class="bi bi-paperclip fs-6"></i> 
+                <span id="nome_arquivo_selecionado">Anexar Arquivo</span>
+                <input type="file" id="anexo_comentario" name="anexo" class="d-none" accept=".jpg,.jpeg,.png,.pdf">
+              </label>
+
+              <button type="submit" class="btn-corp-primary d-flex align-items-center gap-2" style="font-size: 0.85rem; padding: 8px 16px; border: none; box-shadow: none;">
+                <i class="bi bi-send"></i> Enviar
+              </button>
+            </div>
+          </form>
+        </div>
+
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+  document.addEventListener('DOMContentLoaded', function () {
+    var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
+    var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+      return new bootstrap.Tooltip(tooltipTriggerEl)
+    });
+
+    document.getElementById('anexo_comentario').addEventListener('change', function() {
+      var nomeArquivo = this.files.length > 0 ? this.files[0].name : 'Anexar Arquivo';
+      document.getElementById('nome_arquivo_selecionado').textContent = nomeArquivo;
+    });
+  });
+</script>
+{% endblock %}

@@ -1,0 +1,254 @@
+{% extends "base.html" %}
+
+{% block title %}Usuários — IPVP{% endblock %}
+
+{% block content %}
+<div class="container-fluid p-0">
+
+  <div class="d-flex justify-content-between align-items-end mb-4 border-bottom pb-3">
+    <div>
+      <h1 class="h3 mb-1" style="font-weight: 800; color: var(--sgd-navy);">
+        <i class="bi bi-people me-2" style="color: var(--sgd-blue);"></i>Gestão de Usuários
+      </h1>
+      <p class="text-muted mb-0" style="font-size: 0.9rem;">Todos os usuários ativos no sistema.</p>
+    </div>
+    
+    <div>
+      <a href="{{ url_for('admin.novo_usuario') }}" class="btn-corp-primary">
+        <i class="bi bi-plus-lg me-1"></i> Novo Usuário
+      </a>
+    </div>
+  </div>
+
+  <div class="card-corp">
+    
+    <div class="card-header-corp border-bottom-0 pb-0 pt-4 d-flex justify-content-between align-items-center flex-wrap gap-3">
+      
+      <form id="searchForm" method="GET" action="{{ url_for('admin.lista_usuarios') }}" style="flex: 1; max-width: 400px;">
+        <div class="input-group">
+          <span class="input-group-text bg-white border-end-0 text-muted" style="border-radius: 8px 0 0 8px;">
+            <i class="bi bi-search"></i>
+          </span>
+          <input type="text" id="searchInput" name="q" class="form-control border-start-0 shadow-none" 
+                 placeholder="Buscar por nome ou e-mail..." 
+                 value="{{ termo }}" autocomplete="off"
+                 style="border-radius: 0 8px 8px 0; border-color: #dee2e6;">
+          
+          <input type="hidden" name="per_page" id="perPageHidden" value="{{ per_page }}">
+        </div>
+      </form>
+
+      <div class="d-flex align-items-center gap-2 text-muted" style="font-size: 0.85rem;">
+        <label for="perPageSelect" class="mb-0 text-nowrap fw-medium">Exibir:</label>
+        <select id="perPageSelect" class="form-select form-select-sm shadow-none" style="width: auto; border-radius: 6px; border-color: #dee2e6;">
+          <option value="10" {% if per_page == 10 %}selected{% endif %}>10 linhas</option>
+          <option value="25" {% if per_page == 25 %}selected{% endif %}>25 linhas</option>
+          <option value="50" {% if per_page == 50 %}selected{% endif %}>50 linhas</option>
+        </select>
+      </div>
+
+    </div>
+
+    <div class="table-responsive mt-3" style="overflow-x: auto;">
+      <table class="table-corp">
+        <thead>
+          <tr>
+            <th style="width: 35%;">Nome do Usuário</th>
+            <th>E-mail</th>
+            <th style="width: 140px; text-align: center;">Perfil</th>
+            <th>Data de Criação</th>
+            <th style="width: 120px; text-align: center;">Ações</th> 
+          </tr>
+        </thead>
+        <tbody>
+          {% for u in usuarios.items %}
+          <tr style="vertical-align: middle;">
+            
+            <td>
+              <div class="d-flex align-items-center gap-3">
+                <div class="rounded-circle d-flex align-items-center justify-content-center fw-bold"
+                     style="width: 36px; height: 36px; background-color: var(--sgd-bg); color: var(--sgd-blue); font-size: 0.9rem;">
+                  {{ u.nome[0]|upper }}
+                </div>
+                <div>
+                  <span class="d-block fw-bold" style="color: var(--sgd-navy);">
+                    {{ u.nome | smart_title }}
+                  </span>
+                  {% if u.criado_por %}
+                  <span style="font-size: 0.7rem; color: #9ca3af;">Criado por: {{ u.criado_por.nome.split()[0] | smart_title }}</span>
+                  {% endif %}
+                </div>
+              </div>
+            </td>
+            
+            <td style="color: #4b5563; font-size: 0.85rem;">{{ u.email }}</td>
+            
+            <td style="text-align: center;">
+              {% if u.perfil == 'administrador' %}
+                <span class="badge-perfil" style="background: var(--sgd-navy); color: white; border: 1px solid rgba(255,255,255,0.1);">Admin</span>
+              {% elif u.perfil == 'gestor' %}
+                <span class="badge-perfil gestor">Gestor</span>
+              {% else %}
+                <span class="badge-perfil usuario">Usuário</span>
+              {% endif %}
+            </td>
+            
+            <td style="font-size: 0.85rem; color: #6b7280;">{{ u.data_criacao.strftime('%d/%m/%Y') }}</td>
+            
+            <td style="text-align: center;">
+              {% if u.id == current_user.id %}
+                <span style="color: #d1d5db; font-size: 0.8rem; font-weight: 500;">Você</span>
+              {% elif current_user.is_admin or (current_user.is_gestor and u.criado_por_id == current_user.id) %}
+                <button type="button" class="btn btn-link p-0 btn-delete-user" 
+                        data-bs-toggle="modal" 
+                        data-bs-target="#modalExcluir" 
+                        data-uid="{{ u.id }}" 
+                        data-unome="{{ u.nome | smart_title }}"
+                        title="Excluir Usuário">
+                  <i class="bi bi-trash"></i>
+                </button>
+              {% else %}
+                <span style="color: #d1d5db; font-size: 0.8rem;">—</span>
+              {% endif %}
+            </td>
+
+          </tr>
+          {% else %}
+          <tr>
+            <td colspan="5">
+              <div class="empty-state">
+                <i class="bi bi-search" style="font-size: 2.5rem; color: #d1d5db;"></i>
+                <p class="mt-2">Nenhum usuário encontrado.</p>
+              </div>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    {% if usuarios.pages > 0 %}
+    <div class="card-header-corp bg-white border-top border-bottom-0 py-3 d-flex justify-content-between align-items-center">
+      <div class="text-muted" style="font-size: 0.85rem;">
+        Exibindo <strong style="color: var(--sgd-navy);">{{ usuarios.items|length }}</strong> de <strong>{{ usuarios.total }}</strong> registros
+      </div>
+      
+      <nav>
+        <ul class="pagination pagination-sm mb-0">
+          <li class="page-item {% if not usuarios.has_prev %}disabled{% endif %}">
+            <a class="page-link text-secondary shadow-none border-0" 
+               href="{{ url_for('admin.lista_usuarios', page=usuarios.prev_num, q=termo, per_page=per_page) if usuarios.has_prev else '#' }}"
+               style="background-color: transparent;">
+               <i class="bi bi-chevron-left"></i> Anterior
+            </a>
+          </li>
+          
+          <li class="page-item disabled d-none d-sm-block">
+            <span class="page-link text-dark fw-bold border-0" style="background-color: transparent;">
+              Página {{ usuarios.page }} de {{ usuarios.pages }}
+            </span>
+          </li>
+
+          <li class="page-item {% if not usuarios.has_next %}disabled{% endif %}">
+            <a class="page-link text-secondary shadow-none border-0" 
+               href="{{ url_for('admin.lista_usuarios', page=usuarios.next_num, q=termo, per_page=per_page) if usuarios.has_next else '#' }}"
+               style="background-color: transparent;">
+               Próxima <i class="bi bi-chevron-right"></i>
+            </a>
+          </li>
+        </ul>
+      </nav>
+    </div>
+    {% endif %}
+
+  </div>
+</div>
+
+<div class="modal fade" id="modalExcluir" tabindex="-1" aria-labelledby="modalExcluirLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content" style="border-radius: 12px; border: none; box-shadow: 0 10px 30px rgba(0,0,0,0.1);">
+      <div class="modal-header border-0 pb-0">
+        <h5 class="modal-title fw-bold" id="modalExcluirLabel" style="color: var(--sgd-navy);">Confirmar Exclusão</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+      </div>
+      <div class="modal-body text-secondary" style="font-size: 0.95rem;">
+        Tem certeza que deseja excluir o usuário <strong id="modalUserName" class="text-dark"></strong> permanentemente? 
+        <br><br>
+        Esta ação não pode ser desfeita.
+      </div>
+      <div class="modal-footer border-0 pt-0">
+        <button type="button" class="btn btn-light" data-bs-dismiss="modal" style="font-weight: 600; font-size: 0.85rem;">Cancelar</button>
+        <form id="deleteUserForm" method="POST" action="">
+          <button type="submit" class="btn btn-danger" style="font-weight: 600; font-size: 0.85rem; border-radius: 6px;">Excluir</button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+<style>
+  .btn-delete-user {
+    color: #9ca3af; 
+    transition: color 0.2s ease, transform 0.2s ease;
+    font-size: 1.1rem;
+    text-decoration: none;
+  }
+  .btn-delete-user:hover {
+    color: #dc2626; 
+    transform: scale(1.1); 
+  }
+  .input-group .form-control:focus {
+    border-color: #dee2e6;
+    box-shadow: none;
+  }
+</style>
+
+<script>
+  document.addEventListener('DOMContentLoaded', function () {
+    
+    // --- LÓGICA DO MODAL ---
+    var modalExcluir = document.getElementById('modalExcluir');
+    if (modalExcluir) {
+      modalExcluir.addEventListener('show.bs.modal', function (event) {
+        var button = event.relatedTarget;
+        var uid = button.getAttribute('data-uid');
+        var unome = button.getAttribute('data-unome');
+        
+        modalExcluir.querySelector('#modalUserName').textContent = unome;
+        modalExcluir.querySelector('#deleteUserForm').action = '/usuarios/' + uid + '/inativar';
+      });
+    }
+
+    // --- LÓGICA DE DEBOUNCE E PAGINAÇÃO ---
+    const searchInput = document.getElementById('searchInput');
+    const searchForm = document.getElementById('searchForm');
+    const perPageSelect = document.getElementById('perPageSelect');
+    const perPageHidden = document.getElementById('perPageHidden');
+    
+    let debounceTimer;
+
+    // Dispara a busca quando o usuário para de digitar (500ms)
+    searchInput.addEventListener('input', function() {
+      clearTimeout(debounceTimer);
+      debounceTimer = setTimeout(function() {
+        searchForm.submit();
+      }, 500);
+    });
+
+    // Coloca o cursor no final do texto (para não pular para o início ao recarregar)
+    if(searchInput.value) {
+      searchInput.focus();
+      let val = searchInput.value;
+      searchInput.value = '';
+      searchInput.value = val;
+    }
+
+    // Atualiza a tabela imediatamente ao trocar a quantidade de linhas
+    perPageSelect.addEventListener('change', function() {
+      perPageHidden.value = this.value;
+      searchForm.submit();
+    });
+
+  });
+</script>
+{% endblock %}

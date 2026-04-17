@@ -1,0 +1,145 @@
+{% extends "base.html" %}
+{% block title %}Auditoria — SGD{% endblock %}
+{% block page_icon %}shield-check{% endblock %}
+{% block page_title %}Log de Auditoria{% endblock %}
+
+{% block content %}
+
+<!-- Filtros -->
+<div class="card-corp mb-3">
+  <div class="card-body-corp">
+    <form method="GET" action="{{ url_for('admin.auditoria') }}" class="d-flex flex-wrap gap-2 align-items-end">
+
+      <div>
+        <label class="form-label-corp d-block">Tabela</label>
+        <select name="tabela" class="form-select form-select-corp" style="width:200px;">
+          <option value="">Todas</option>
+          {% for t in tabelas %}
+          <option value="{{ t }}" {% if filtro_tabela == t %}selected{% endif %}>{{ t }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div>
+        <label class="form-label-corp d-block">Ação</label>
+        <select name="acao" class="form-select form-select-corp" style="width:160px;">
+          <option value="">Todas</option>
+          {% for a in acoes %}
+          <option value="{{ a }}" {% if filtro_acao == a %}selected{% endif %}>{{ a }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <button type="submit" class="btn-corp-primary">
+        <i class="bi bi-funnel me-1"></i>Filtrar
+      </button>
+      <a href="{{ url_for('admin.auditoria') }}"
+         style="padding:7px 14px;border:1px solid #d1d5db;border-radius:6px;
+                font-size:.83rem;font-weight:500;text-decoration:none;color:#374151;background:#fff;">
+        Limpar
+      </a>
+
+    </form>
+  </div>
+</div>
+
+<div class="card-corp">
+  <div class="card-header-corp">
+    <h6><i class="bi bi-list-columns me-2 opacity-50"></i>Registros de Auditoria</h6>
+    <span style="font-size:.72rem;color:#9ca3af;">
+      {{ registros.total }} registro(s) total · página {{ registros.page }}/{{ registros.pages }}
+    </span>
+  </div>
+
+  <div class="table-responsive">
+    <table class="table-corp">
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Data/Hora</th>
+          <th>Ator</th>
+          <th>Ação</th>
+          <th>Tabela</th>
+          <th>ID Reg.</th>
+          <th>Dados</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for r in registros.items %}
+        <tr>
+          <td style="color:#9ca3af;font-size:.72rem;">#{{ r.id }}</td>
+          <td style="font-size:.75rem;color:#6b7280;white-space:nowrap;">
+            {{ r.data_hora.strftime('%d/%m/%Y %H:%M:%S') }}
+          </td>
+          <td style="font-size:.8rem;">
+            {% if r.ator %}
+              {{ r.ator.nome.split()[0] }}
+              <span style="font-size:.68rem;color:#9ca3af;">· {{ r.ator.perfil }}</span>
+            {% else %}
+              <span style="color:#9ca3af;">Sistema</span>
+            {% endif %}
+          </td>
+          <td>
+            {% set acao_colors = {
+              'CRIOU': '#16a34a', 'EDITOU': '#1d5fa6', 'EXCLUIU': '#dc2626',
+              'STATUS': '#d97706', 'LOGIN': '#7c3aed', 'LOGOUT': '#6b7280', 'NEGADO': '#dc2626'
+            } %}
+            <span style="font-size:.72rem;font-weight:700;
+                         color:{{ acao_colors.get(r.acao, '#374151') }};">
+              {{ r.acao }}
+            </span>
+          </td>
+          <td style="font-size:.75rem;color:#6b7280;font-family:monospace;">{{ r.tabela_afetada }}</td>
+          <td style="font-size:.78rem;color:#9ca3af;text-align:center;">
+            {{ r.registro_id or '—' }}
+          </td>
+          <td style="max-width:260px;">
+            {% if r.dados_json %}
+            <details>
+              <summary style="font-size:.72rem;color:#1d5fa6;cursor:pointer;list-style:none;">
+                <i class="bi bi-code-square me-1"></i>Ver JSON
+              </summary>
+              <pre style="font-size:.65rem;background:#f8fafc;border:1px solid #e2e8f0;
+                          border-radius:4px;padding:6px 8px;margin-top:4px;
+                          white-space:pre-wrap;word-break:break-all;max-height:120px;overflow:auto;">{{ r.dados_json }}</pre>
+            </details>
+            {% else %}
+            <span style="color:#d1d5db;font-size:.72rem;">—</span>
+            {% endif %}
+          </td>
+        </tr>
+        {% else %}
+        <tr><td colspan="7">
+          <div class="empty-state"><i class="bi bi-shield"></i><p>Nenhum registro de auditoria.</p></div>
+        </td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Paginação -->
+  {% if registros.pages > 1 %}
+  <div style="padding:12px 16px;border-top:1px solid #f0f2f5;display:flex;gap:6px;justify-content:center;">
+    {% if registros.has_prev %}
+    <a href="{{ url_for('admin.auditoria', page=registros.prev_num, tabela=filtro_tabela, acao=filtro_acao) }}"
+       style="padding:4px 12px;border:1px solid #d1d5db;border-radius:5px;
+              font-size:.78rem;text-decoration:none;color:#374151;">
+      ← Anterior
+    </a>
+    {% endif %}
+    <span style="padding:4px 12px;font-size:.78rem;color:#9ca3af;">
+      {{ registros.page }} / {{ registros.pages }}
+    </span>
+    {% if registros.has_next %}
+    <a href="{{ url_for('admin.auditoria', page=registros.next_num, tabela=filtro_tabela, acao=filtro_acao) }}"
+       style="padding:4px 12px;border:1px solid #d1d5db;border-radius:5px;
+              font-size:.78rem;text-decoration:none;color:#374151;">
+      Próxima →
+    </a>
+    {% endif %}
+  </div>
+  {% endif %}
+
+</div>
+
+{% endblock %}

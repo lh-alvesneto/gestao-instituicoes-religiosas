@@ -1,0 +1,75 @@
+{% extends "base.html" %}
+
+{% block title %}{% if editando %}Editar Solicitação{% else %}Nova Solicitação de Material{% endif %} — IPVP{% endblock %}
+
+{% block content %}
+<div class="container-fluid p-0">
+
+  <div class="mb-4">
+    <a href="{{ url_for('materiais.lista') }}" class="text-decoration-none mb-2 d-inline-block" style="color: #6b7280; font-size: 0.85rem; font-weight: 600;">
+      <i class="bi bi-arrow-left me-1"></i> Voltar para Materiais
+    </a>
+    <h1 class="h3 mb-0" style="font-weight: 800; color: var(--sgd-navy);">
+      <i class="bi {% if editando %}bi-pencil-square{% else %}bi-box-seam{% endif %} me-2" style="color: var(--sgd-blue);"></i>
+      {% if editando %}Editar Solicitação{% else %}Nova Solicitação de Material{% endif %}
+    </h1>
+  </div>
+
+  <div class="row">
+    <div class="col-12 col-xl-6 col-lg-8"> 
+      
+      <div class="card-corp">
+        <div class="card-header-corp d-flex align-items-center gap-2">
+          <i class="bi {% if editando %}bi-pencil{% else %}bi-plus-circle{% endif %} text-muted"></i>
+          <h6 class="mb-0">{% if editando %}Atualize os dados abaixo{% else %}Preencha os dados da solicitação{% endif %}</h6>
+        </div>
+        
+        <div class="p-4">
+          <form method="POST" action="{{ url_for('materiais.editar', mid=sol.id) if editando else url_for('materiais.novo') }}">
+            
+            <div class="mb-4">
+              <label for="nome_material" class="form-label-corp">Nome do Material <span class="text-danger">*</span></label>
+              <input type="text" class="form-control input-corp" id="nome_material" name="nome_material" 
+                     placeholder="Ex.: Resma de Papel A4, Cartuchos HP, Toner..." 
+                     value="{{ sol.nome_material if editando else '' }}" required autofocus>
+            </div>
+            
+            <div class="mb-4">
+              <label for="quantidade" class="form-label-corp">Quantidade <span class="text-danger">*</span></label>
+              <input type="number" class="form-control input-corp" id="quantidade" name="quantidade" 
+                     value="{{ sol.quantidade if editando else '1' }}" min="1" required style="max-width: 150px;">
+            </div>
+            
+            <div class="mb-4">
+              <label for="justificativa" class="form-label-corp">Justificativa <span class="text-danger">*</span></label>
+              <textarea class="form-control input-corp" id="justificativa" name="justificativa" 
+                        rows="4" placeholder="Descreva a necessidade e onde o material será utilizado..." required>{{ sol.justificativa if editando else '' }}</textarea>
+            </div>
+
+            {% if editando and current_user.pode_gerenciar %}
+            <div class="mb-4 p-3 rounded" style="background-color: #fef2f2; border: 1px solid #fca5a5;">
+              <label for="justificativa_edicao" class="form-label-corp text-danger" style="font-weight: 700;">Motivo da Edição (Auditoria) <span class="text-danger">*</span></label>
+              <input type="text" class="form-control input-corp" id="justificativa_edicao" name="justificativa_edicao" 
+                     placeholder="Ex: Correção de quantidade, ajuste de nome..." required>
+            </div>
+            {% endif %}
+
+            <div class="d-flex justify-content-end gap-3 mt-4 pt-4 border-top">
+              <a href="{{ url_for('materiais.lista') }}" class="btn btn-light" style="font-weight: 600; font-size: 0.9rem; padding: 10px 20px; color: #4b5563; border-color: #d1d5db;">
+                Cancelar
+              </a>
+              <button type="submit" class="btn-corp-primary d-flex align-items-center gap-2" style="font-size: 0.9rem; padding: 10px 20px; border: none; box-shadow: none;">
+                <i class="bi {% if editando %}bi-check-lg{% else %}bi-send{% endif %}"></i> 
+                {% if editando %}Salvar Alterações{% else %}Enviar Solicitação{% endif %}
+              </button>
+            </div>
+            
+          </form>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+</div>
+{% endblock %}
