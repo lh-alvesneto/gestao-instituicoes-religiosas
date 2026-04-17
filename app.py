@@ -6,6 +6,7 @@
 
 import os
 import json
+from dotenv import load_dotenv
 from datetime import datetime
 from functools import wraps
 
@@ -21,6 +22,7 @@ from flask_login import (
 from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.utils import secure_filename
 
+load_dotenv()
 
 # =============================================================================
 # CONFIGURAÇÃO DA APLICAÇÃO
@@ -29,6 +31,9 @@ BASE_DIR  = os.path.abspath(os.path.dirname(__file__))
 UPLOAD_DIR = os.path.join(BASE_DIR, 'uploads')
 
 app = Flask(__name__)
+app.config['SECRET_KEY'] = os.getenv('FLASK_SECRET_KEY', 'chave-de-emergencia-nao-usar-em-producao')
+app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URL', 'sqlite:///database.db')
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 @app.template_filter('smart_title')
 def smart_title(text):
@@ -223,6 +228,7 @@ class ComentarioChamado(db.Model):
     id_usuario   = db.Column(db.Integer, db.ForeignKey('usuario.id'), nullable=False)
     texto        = db.Column(db.Text, nullable=False)
     data_hora    = db.Column(db.DateTime, default=datetime.utcnow)
+    caminho_anexo = db.Column(db.String(300), nullable=True)
 
 
 class Anexo(db.Model):
@@ -708,40 +714,6 @@ def editar_material(mid: int):
 
     return render_template('form_material.html', sol=sol, editando=True)
 
-    if request.method == 'POST':
-        justificativa_edicao = request.form.get('justificativa_edicao', '').strip()
-
-        # Admin/Gestor: justificativa de edição obrigatória
-        if u.pode_gerenciar and not justificativa_edicao:
-            flash('Gestores e Administradores devem informar a justificativa da edição.', 'warning')
-            return render_template('form_material.html', sol=sol, editando=True)
-
-        dados_antes = {
-            'nome_material': sol.nome_material,
-            'quantidade':    sol.quantidade,
-            'justificativa': sol.justificativa,
-        }
-
-        sol.nome_material = request.form.get('nome_material', sol.nome_material).strip()
-        sol.quantidade    = int(request.form.get('quantidade', sol.quantidade))
-        sol.justificativa = request.form.get('justificativa', sol.justificativa).strip()
-
-        log_auditoria('EDITOU', 'solicitacao_material', sol.id, {
-            'antes': dados_antes,
-            'depois': {
-                'nome_material': sol.nome_material,
-                'quantidade':    sol.quantidade,
-                'justificativa': sol.justificativa,
-            },
-            'justificativa_edicao': justificativa_edicao or 'N/A (usuário comum)',
-        })
-        db.session.commit()
-        flash('Solicitação atualizada com sucesso.', 'success')
-        return redirect(url_for('materiais'))
-
-    return render_template('form_material.html', sol=sol, editando=True)
-
-
 @app.route('/materiais/<int:mid>/status/<novo_status>')
 @perfil_requerido('administrador', 'gestor')
 @usuario_ativo_requerido
@@ -1075,6 +1047,11 @@ def detalhe_chamado(cid: int):
 
     comentarios = ComentarioChamado.query.filter_by(id_chamado=cid, tipo_chamado='manutencao').all()
     auditorias = Auditoria.query.filter_by(tabela_afetada='solicitacao_manutencao', registro_id=cid).all()
+
+    # --- INSERIR ESTAS DUAS LINHAS ---
+    timeline_items = comentarios + auditorias
+    timeline = sorted(timeline_items, key=lambda x: x.data_hora)
+    # ---------------------------------
 
     return render_template('detalhe_chamado.html', chamado=chamado, timeline=timeline, anexos=chamado.anexos.all())
 
