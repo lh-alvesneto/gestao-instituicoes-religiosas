@@ -1,32 +1,24 @@
 """
 =============================================================================
   SGD Corporativo — Script de Inicialização do Banco de Dados
-  Arquivo: create_db.py
-
-  O que este script faz:
-    1. Cria todas as tabelas definidas nos modelos do app.py
-    2. Injeta o Administrador Mestre com senha em HASH (Werkzeug)
-    3. Cria um Gestor e um Usuário Comum para testes de RBAC
-    4. Insere dados de demonstração para apresentação
-    5. Registra as criações na tabela de Auditoria
-
-  Como executar:
-    python create_db.py
-
-  ATENÇÃO: Este script verifica se o banco já existe.
-           Execute com --reset para recriar do zero.
+  Arquivo: create_db.py (Adaptado para a Arquitetura Modular)
 =============================================================================
 """
 
 import sys
 import json
+import argparse
 from datetime import datetime, timedelta
-from app import app, db
-from app import (
+
+from core import create_app
+from core.extensions import db
+from core.models import (
     Usuario, SolicitacaoMaterial, SolicitacaoManutencao,
     ComentarioChamado, Auditoria, Anexo
 )
 
+# Cria a aplicação para termos o contexto do Flask
+app = create_app()
 
 # =============================================================================
 # CONFIGURAÇÃO DOS USUÁRIOS PADRÃO
@@ -36,7 +28,7 @@ USUARIOS_PADRAO = [
     {
         'nome'   : 'Administrador do Sistema',
         'email'  : 'admin@igreja.com',
-        'senha'  : 'Admin@2024',          # Será convertida para hash
+        'senha'  : 'Admin@2024',
         'perfil' : 'administrador',
     },
     {
@@ -67,7 +59,7 @@ def separador(titulo: str):
 
 
 def log_sistema(acao, tabela, registro_id, dados, ator_id):
-    """Registra auditoria sem depender do contexto request."""
+    """Registra auditoria sem depender do contexto de requisição web (para o CLI)."""
     entrada = Auditoria(
         id_ator        = ator_id,
         acao           = acao,
@@ -79,11 +71,10 @@ def log_sistema(acao, tabela, registro_id, dados, ator_id):
 
 
 def criar_usuarios() -> dict:
-    """Cria os usuários padrão com senha em hash. Retorna dicionário {email: objeto}."""
     separador("CRIANDO USUÁRIOS")
     mapa = {}
 
-    for i, dados in enumerate(USUARIOS_PADRAO):
+    for dados in USUARIOS_PADRAO:
         if Usuario.query.filter_by(email=dados['email']).first():
             print(f"  ⚠  Já existe: {dados['email']} — pulando.")
             mapa[dados['email']] = Usuario.query.filter_by(email=dados['email']).first()
@@ -93,7 +84,7 @@ def criar_usuarios() -> dict:
             nome          = dados['nome'],
             email         = dados['email'],
             perfil        = dados['perfil'],
-            criado_por_id = None,   # será ajustado abaixo
+            criado_por_id = None,
         )
         u.set_senha(dados['senha'])
         db.session.add(u)
@@ -103,7 +94,6 @@ def criar_usuarios() -> dict:
 
     db.session.flush()
 
-    # Ajusta criado_por_id para rastreabilidade
     admin  = mapa.get('admin@igreja.com')
     gestor = mapa.get('gestor@igreja.com')
     joao   = mapa.get('joao@igreja.com')
@@ -118,7 +108,6 @@ def criar_usuarios() -> dict:
 
     db.session.flush()
 
-    # Auditoria das criações
     for email, u in mapa.items():
         log_sistema('CRIOU', 'usuario', u.id,
                     {'email': u.email, 'perfil': u.perfil, 'origem': 'seed'},
@@ -128,7 +117,6 @@ def criar_usuarios() -> dict:
 
 
 def criar_materiais(mapa: dict):
-    """Insere solicitações de material de demonstração."""
     separador("CRIANDO SOLICITAÇÕES DE MATERIAL")
 
     admin  = mapa.get('admin@igreja.com')
@@ -160,27 +148,7 @@ def criar_materiais(mapa: dict):
             status                = 'aprovado',
             ativo                 = True,
             data_criacao          = datetime.utcnow() - timedelta(days=7),
-        ),
-        SolicitacaoMaterial(
-            id_usuario            = joao.id,
-            id_admin_responsavel  = admin.id if admin else None,
-            nome_material         = 'Toner HP LaserJet 85A',
-            quantidade            = 2,
-            justificativa         = 'Toner atual no fim, necessário para manutenção da impressão.',
-            status                = 'entregue',
-            ativo                 = True,
-            data_criacao          = datetime.utcnow() - timedelta(days=20),
-        ),
-        SolicitacaoMaterial(
-            id_usuario            = maria.id,
-            id_admin_responsavel  = None,
-            nome_material         = 'Garrafa Térmica 1,8L (Inox)',
-            quantidade            = 5,
-            justificativa         = 'Para servir café durante os cultos de quarta-feira.',
-            status                = 'pendente',
-            ativo                 = True,
-            data_criacao          = datetime.utcnow() - timedelta(days=1),
-        ),
+        )
     ]
 
     for m in materiais:
@@ -193,7 +161,6 @@ def criar_materiais(mapa: dict):
 
 
 def criar_manutencoes(mapa: dict):
-    """Insere chamados de manutenção de demonstração."""
     separador("CRIANDO CHAMADOS DE MANUTENÇÃO")
 
     admin  = mapa.get('admin@igreja.com')
@@ -210,8 +177,7 @@ def criar_manutencoes(mapa: dict):
             id_usuario           = joao.id,
             id_admin_responsavel = None,
             local                = 'Salão Principal',
-            descricao            = 'Ar-condicionado LG 18000 BTUs não está resfriando. '
-                                   'Provavelmente falta de gás ou problema no compressor.',
+            descricao            = 'Ar-condicionado não está resfriando. Falta de gás.',
             urgencia             = 'alta',
             status               = 'aberto',
             ativo                = True,
@@ -221,35 +187,12 @@ def criar_manutencoes(mapa: dict):
             id_usuario           = maria.id,
             id_admin_responsavel = gestor.id if gestor else admin.id,
             local                = 'Banheiro Feminino — 1º andar',
-            descricao            = 'Torneira do lavatório com vazamento constante. '
-                                   'Perda de água visível, necessita troca do reparo.',
+            descricao            = 'Torneira do lavatório com vazamento constante.',
             urgencia             = 'media',
             status               = 'em_andamento',
             ativo                = True,
             data_criacao         = datetime.utcnow() - timedelta(days=4),
-        ),
-        SolicitacaoManutencao(
-            id_usuario           = joao.id,
-            id_admin_responsavel = admin.id if admin else None,
-            local                = 'Estacionamento',
-            descricao            = 'Dois postes de iluminação com lâmpadas queimadas '
-                                   'no setor B do estacionamento.',
-            urgencia             = 'baixa',
-            status               = 'concluido',
-            ativo                = True,
-            data_criacao         = datetime.utcnow() - timedelta(days=15),
-        ),
-        SolicitacaoManutencao(
-            id_usuario           = maria.id,
-            id_admin_responsavel = None,
-            local                = 'Sala de Reuniões 03',
-            descricao            = 'Projetor Epson apresentando linha horizontal na imagem. '
-                                   'Problema verificado durante a reunião do conselho.',
-            urgencia             = 'media',
-            status               = 'aberto',
-            ativo                = True,
-            data_criacao         = datetime.utcnow() - timedelta(days=1),
-        ),
+        )
     ]
 
     for c in manutencoes:
@@ -259,32 +202,6 @@ def criar_manutencoes(mapa: dict):
                     {'local': c.local, 'urgencia': c.urgencia, 'origem': 'seed'},
                     ator_id=c.id_usuario)
         print(f"  ✓  [{c.urgencia:6}] [{c.status:13}] {c.local}")
-
-
-def criar_comentarios(mapa: dict):
-    """Insere comentários de demonstração."""
-    separador("CRIANDO COMENTÁRIOS")
-
-    gestor = mapa.get('gestor@igreja.com')
-    admin  = mapa.get('admin@igreja.com')
-
-    if not gestor:
-        return
-
-    # Chamado em_andamento (id 2) recebe comentário do gestor
-    man = SolicitacaoManutencao.query.filter_by(
-        local='Banheiro Feminino — 1º andar').first()
-    if man:
-        c = ComentarioChamado(
-            id_chamado   = man.id,
-            tipo_chamado = 'manutencao',
-            id_usuario   = gestor.id,
-            texto        = 'Técnico agendado para amanhã às 09h. '
-                           'Peça de reposição já foi adquirida.',
-            data_hora    = datetime.utcnow() - timedelta(hours=2),
-        )
-        db.session.add(c)
-        print(f"  ✓  Comentário em [{man.local}] por {gestor.nome}")
 
 
 def inicializar(reset: bool = False):
@@ -301,15 +218,12 @@ def inicializar(reset: bool = False):
         mapa = criar_usuarios()
         criar_materiais(mapa)
         criar_manutencoes(mapa)
-        criar_comentarios(mapa)
 
         db.session.commit()
 
-        # ================================================================
         separador("✅  BANCO INICIALIZADO COM SUCESSO")
-        # ================================================================
         print(f"""
-  Execute o servidor:  python app.py
+  Execute o servidor:  python run.py
   Acesse em:          http://127.0.0.1:5000
 
   ┌─────────────────────────────────────────────────────┐
@@ -322,11 +236,20 @@ def inicializar(reset: bool = False):
   │  joao@igreja.com         │  Joao@123    │  Usuário  │
   │  maria@igreja.com        │  Maria@123   │  Usuário  │
   └──────────────────────────┴──────────────┴───────────┘
-
-  ATENÇÃO: Senhas armazenadas com hash Werkzeug (pbkdf2:sha256).
         """)
 
 
 if __name__ == '__main__':
-    reset_flag = '--reset' in sys.argv
-    inicializar(reset=reset_flag)
+    parser = argparse.ArgumentParser(description="Gerenciador do Banco de Dados SGD")
+    parser.add_argument('--reset', action='store_true', help="Apaga e recria todo o banco de dados")
+    args = parser.parse_args()
+    
+    if args.reset:
+        confirmacao = input("\nTEM CERTEZA? Isso apagará todos os dados! (s/N): ")
+        if confirmacao.lower() == 's':
+            inicializar(reset=True)
+        else:
+            print("Operação cancelada.")
+    else:
+        # Se rodar sem --reset, ele apenas adiciona o que falta (seguro)
+        inicializar(reset=False)
