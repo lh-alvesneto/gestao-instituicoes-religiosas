@@ -133,7 +133,6 @@ class Anexo(db.Model):
     data_upload     = db.Column(db.DateTime, default=datetime.utcnow)
 
 
-# Regista o carregador de utilizador no Flask-Login
 @login_manager.user_loader
 def load_user(user_id: str):
-    return Usuario.query.get(int(user_id))
+    return db.session.get(Usuario, int(user_id))

@@ -62,11 +62,16 @@ def novo():
 @usuario_ativo_requerido
 def detalhe(mid: int):
     sol = SolicitacaoMaterial.query.filter_by(id=mid, ativo=True).first_or_404()
+    
     if current_user.is_usuario and sol.id_usuario != current_user.id:
         abort(403)
+        
     comentarios = ComentarioChamado.query.filter_by(id_chamado=mid, tipo_chamado='material').order_by(ComentarioChamado.data_hora).all()
-    return render_template('detalhe_material.html', sol=sol, comentarios=comentarios)
+    
+    # A correção está na palavra "timeline=" (antes estava "comentarios=")
+    return render_template('detalhe_material.html', sol=sol, timeline=comentarios)
 
+# --- ESTA É A ROTA QUE ESTAVA FALTANDO ---
 @materiais_bp.route('/materiais/<int:mid>/editar', methods=['GET', 'POST'])
 @login_required
 @usuario_ativo_requerido
@@ -98,15 +103,22 @@ def editar(mid: int):
         flash('Solicitação atualizada.', 'success')
         return redirect(url_for('materiais.lista'))
     return render_template('form_material.html', sol=sol, editando=True)
+# ------------------------------------------
 
 @materiais_bp.route('/materiais/<int:mid>/status/<novo_status>')
 @perfil_requerido('administrador', 'gestor')
 @usuario_ativo_requerido
 def alterar_status(mid: int, novo_status: str):
+    # Trava de segurança para impedir URLs maliciosas
+    STATUS_VALIDOS = {'pendente', 'aprovado', 'entregue', 'cancelado'}
+    if novo_status not in STATUS_VALIDOS:
+        abort(400)
+        
     sol = SolicitacaoMaterial.query.filter_by(id=mid, ativo=True).first_or_404()
     status_ant = sol.status
     sol.status = novo_status
     sol.id_admin_responsavel = current_user.id
+    
     log_auditoria('STATUS', 'solicitacao_material', sol.id, {'de': status_ant, 'para': novo_status})
     db.session.commit()
     flash(f'Status atualizado para {novo_status}.', 'success')

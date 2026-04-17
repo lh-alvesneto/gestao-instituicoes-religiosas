@@ -100,40 +100,44 @@ def serve_upload(filename: str):
 @usuario_ativo_requerido
 def editar(cid: int):
     chamado = SolicitacaoManutencao.query.filter_by(id=cid, ativo=True).first_or_404()
+    
     if chamado.status in ['em_andamento', 'concluido', 'cancelado']:
         flash('Chamados finalizados não podem ser editados.', 'warning')
         return redirect(url_for('manutencao.detalhe', cid=cid))
+    
     if current_user.is_usuario and (chamado.id_usuario != current_user.id or chamado.status != 'aberto'):
         abort(403)
+        
     if request.method == 'POST':
-        # ... (lógica de edição do app.py original) ...
+        # Aqui está a lógica de salvar que estava faltando!
+        chamado.local = request.form.get('local', chamado.local).strip()
+        chamado.descricao = request.form.get('descricao', chamado.descricao).strip()
+        chamado.urgencia = request.form.get('urgencia', chamado.urgencia)
+        
+        log_auditoria('EDITOU', 'solicitacao_manutencao', chamado.id, {
+            'local': chamado.local, 'urgencia': chamado.urgencia
+        })
         db.session.commit()
-        flash('Chamado atualizado.', 'success')
+        flash('Chamado atualizado com sucesso.', 'success')
         return redirect(url_for('manutencao.lista'))
+        
     return render_template('form_manutencao.html', chamado=chamado, editando=True)
 
 @manutencao_bp.route('/manutencao/<int:cid>/status/<novo_status>')
 @perfil_requerido('administrador', 'gestor')
 @usuario_ativo_requerido
 def alterar_status(cid: int, novo_status: str):
+    # Trava de segurança para impedir URLs maliciosas
+    STATUS_VALIDOS = {'aberto', 'em_andamento', 'concluido', 'cancelado'}
+    if novo_status not in STATUS_VALIDOS:
+        abort(400)
+        
     chamado = SolicitacaoManutencao.query.filter_by(id=cid, ativo=True).first_or_404()
     status_ant = chamado.status
     chamado.status = novo_status
     chamado.id_admin_responsavel = current_user.id
+    
     log_auditoria('STATUS', 'solicitacao_manutencao', chamado.id, {'de': status_ant, 'para': novo_status})
     db.session.commit()
-    flash(f'Status atualizado.', 'success')
-    return redirect(url_for('manutencao.lista'))
-
-@manutencao_bp.route('/manutencao/<int:cid>/excluir', methods=['POST'])
-@login_required
-@usuario_ativo_requerido
-def excluir(cid: int):
-    chamado = SolicitacaoManutencao.query.filter_by(id=cid, ativo=True).first_or_404()
-    if current_user.is_usuario and (chamado.id_usuario != current_user.id or chamado.status != 'aberto'):
-        abort(403)
-    chamado.ativo = False
-    log_auditoria('EXCLUIU', 'solicitacao_manutencao', chamado.id, {'local': chamado.local})
-    db.session.commit()
-    flash('Chamado removido.', 'danger')
+    flash('Status atualizado com sucesso.', 'success')
     return redirect(url_for('manutencao.lista'))
