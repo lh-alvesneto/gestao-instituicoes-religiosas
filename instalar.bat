@@ -60,30 +60,13 @@ set PYTHONWARNINGS=ignore
 echo OK: Variaveis configuradas.
 echo.
 
-echo [5/5] Preparando Banco de Dados e Usuario Admin...
-:: Cria um script Python temporario para forcar a criacao do admin
-echo from core import create_app > setup_db.py
-echo from core.extensions import db >> setup_db.py
-echo from core.models import Usuario >> setup_db.py
-echo app = create_app() >> setup_db.py
-echo with app.app_context(): >> setup_db.py
-echo     db.create_all() >> setup_db.py
-echo     try: >> setup_db.py
-echo         from core.models import PerfilUsuario >> setup_db.py
-echo         perfil_admin = PerfilUsuario.ADMINISTRADOR >> setup_db.py
-echo     except: >> setup_db.py
-echo         perfil_admin = 'administrador' >> setup_db.py
-echo     from sqlalchemy import select >> setup_db.py
-echo     admin = db.session.execute(select(Usuario).filter_by(email='admin@ipvp.com')).scalar_one_or_none() >> setup_db.py
-echo     if not admin: >> setup_db.py
-echo         admin = Usuario(nome='Administrador', email='admin@ipvp.com', perfil=perfil_admin) >> setup_db.py
-echo         admin.set_senha('123456') >> setup_db.py
-echo         db.session.add(admin) >> setup_db.py
-echo         db.session.commit() >> setup_db.py
-python setup_db.py
-del setup_db.py
-
-echo OK: Banco de Dados sincronizado.
+echo [5/5] Preparando o Banco de Dados (Gerando Dados de Teste)...
+:: Aqui o script chama o seu arquivo oficial create_db.py
+if not exist "instance\demandas.db" (
+    python create_db.py
+) else (
+    echo OK: Banco de dados ja existe.
+)
 
 cls
 echo ========================================================
@@ -92,8 +75,17 @@ echo ========================================================
 echo.
 echo DADOS DE ACESSO PARA GRAVAR O VIDEO/TESTAR:
 echo --------------------------------------------------------
-echo E-mail: admin@ipvp.com
-echo Senha:  123456
+echo [ ADMINISTRADOR ]
+echo E-mail: admin@igreja.com
+echo Senha:  Admin@2024
+echo.
+echo [ GESTOR ]
+echo E-mail: gestor@igreja.com
+echo Senha:  Gestor@123
+echo.
+echo [ USUARIO COMUM ]
+echo E-mail: joao@igreja.com
+echo Senha:  Joao@123
 echo --------------------------------------------------------
 echo.
 echo O seu navegador sera aberto automaticamente em 3 segundos...
@@ -103,7 +95,7 @@ echo.
 timeout /t 3 >nul
 start http://127.0.0.1:5000
 
-:: Executa o flask via modulo python para garantir estabilidade
+:: Executa o flask
 python -m flask run --host=127.0.0.1 --port=5000
 
 pause
