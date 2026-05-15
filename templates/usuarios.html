@@ -1,272 +1,160 @@
 {% extends "base.html" %}
+{% from "components.html" import render_pagination, render_button, render_avatar %}
 
 {% block title %}Usuários — IPVP{% endblock %}
 
+{% block header_content %}
+  <h1 class="h3 mb-1 page-title fw-bold" style="color: var(--color-primary-800);">Usuários</h1>
+  <p class="mb-0 text-muted small mt-1">Gerencie os acessos, perfis e permissões da equipe.</p>
+{% endblock %}
+
 {% block content %}
 <div class="container-fluid p-0">
+  <div class="card-listagem mb-4">
+    
+    <div class="d-flex flex-column flex-lg-row justify-content-between align-items-center mb-4 gap-3">
+      <div class="custom-tabs-container">
+        <a href="{{ url_for('admin.lista_usuarios', perfil=request.args.get('perfil', ''), q=request.args.get('q', '')) }}" class="custom-tab {% if not request.args.get('status') %}active{% endif %}">Todos</a>
+        <a href="{{ url_for('admin.lista_usuarios', status='ativo', perfil=request.args.get('perfil', ''), q=request.args.get('q', '')) }}" class="custom-tab {% if request.args.get('status') == 'ativo' %}active{% endif %}">Ativos</a>
+        <a href="{{ url_for('admin.lista_usuarios', status='inativo', perfil=request.args.get('perfil', ''), q=request.args.get('q', '')) }}" class="custom-tab {% if request.args.get('status') == 'inativo' %}active{% endif %}">Inativos</a>
+      </div>
 
-  <div class="d-flex justify-content-between align-items-end mb-4 border-bottom pb-3">
-    <div>
-      <h1 class="h3 mb-1" style="font-weight: 800; color: var(--sgd-navy);">
-        <i class="bi bi-people me-2" style="color: var(--sgd-blue);"></i>Gestão de Usuários
-      </h1>
-      <p class="text-muted mb-0" style="font-size: 0.9rem;">Todos os usuários cadastrados no sistema.</p>
+      {{ render_button('Novo Usuário', icon='bi-person-plus', href=url_for('admin.novo_usuario'), class='btn-acao-solida shadow-sm') }}
     </div>
-    <div>
-      <a href="{{ url_for('admin.novo_usuario') }}" class="btn-corp-primary">
-        <i class="bi bi-plus-lg me-1"></i> Novo Usuário
-      </a>
-    </div>
-  </div>
 
-  <div class="card-corp">
-    <div class="card-header-corp border-bottom-0 pb-0 pt-4 d-flex justify-content-between align-items-center flex-wrap gap-3">
+    <form id="searchForm" method="GET" action="{{ url_for('admin.lista_usuarios') }}" class="d-flex justify-content-between align-items-start flex-wrap gap-3 mb-4 w-100">
+      <input type="hidden" name="status" value="{{ request.args.get('status', '') }}">
       
-      <form id="searchForm" class="fluid-search-form" method="GET" action="{{ url_for('admin.lista_usuarios') }}" style="flex: 1; max-width: 600px;">
-        <div class="input-group">
-          <span class="input-group-text bg-white border-end-0 text-muted" style="border-radius: 8px 0 0 8px;">
+      <div class="d-flex flex-wrap align-items-center gap-2" style="flex: 1;">
+        <div class="input-group" style="width: 280px;">
+          <span class="input-group-text bg-white border-end-0 border-neutral-300 text-neutral-500 rounded-start">
             <i class="bi bi-search"></i>
           </span>
-          <input type="text" name="q" class="form-control border-start-0 shadow-none" 
-                 placeholder="Buscar por nome ou e-mail..." 
-                 value="{{ request.args.get('q', '') }}" autocomplete="off"
-                 style="border-color: #dee2e6;">
-          
-          <select name="perfil" class="form-select border-start-0 shadow-none" style="max-width: 130px; border-radius: 0; border-color: #dee2e6; background-color: #f8f9fa;">
-            <option value="">Perfis</option>
-            <option value="administrador" {% if request.args.get('perfil') == 'administrador' %}selected{% endif %}>Admin</option>
-            <option value="gestor" {% if request.args.get('perfil') == 'gestor' %}selected{% endif %}>Gestor</option>
-            <option value="usuario" {% if request.args.get('perfil') == 'usuario' %}selected{% endif %}>Usuário</option>
-          </select>
-
-          <select name="status" class="form-select border-start-0 shadow-none" style="max-width: 120px; border-radius: 0 8px 8px 0; border-color: #dee2e6; background-color: #f8f9fa;">
-            <option value="">Status</option>
-            <option value="ativo" {% if request.args.get('status') == 'ativo' %}selected{% endif %}>Ativos</option>
-            <option value="inativo" {% if request.args.get('status') == 'inativo' %}selected{% endif %}>Inativos</option>
-          </select>
-          
-          <input type="hidden" name="per_page" id="perPageHidden" value="{{ request.args.get('per_page', 10) }}">
+          <input type="text" name="q" class="form-control border-start-0 shadow-none search-input auto-submit-search rounded-end" placeholder="Nome ou e-mail..." value="{{ request.args.get('q', '') }}" autocomplete="off">
         </div>
-      </form>
 
-      <div class="d-flex align-items-center gap-2 text-muted" style="font-size: 0.85rem;">
-        <label for="perPageSelect" class="mb-0 text-nowrap fw-medium">Exibir:</label>
-        <select id="perPageSelect" class="form-select form-select-sm shadow-none fluid-search-form" style="width: auto; border-radius: 6px; border-color: #dee2e6;" onchange="document.getElementById('perPageHidden').value = this.value; this.form.dispatchEvent(new Event('change'));">
-          <option value="10" {% if request.args.get('per_page', '10') == '10' %}selected{% endif %}>10 linhas</option>
-          <option value="25" {% if request.args.get('per_page') == '25' %}selected{% endif %}>25 linhas</option>
-          <option value="50" {% if request.args.get('per_page') == '50' %}selected{% endif %}>50 linhas</option>
-        </select>
+        <input type="hidden" name="perfil" id="perfilInput" value="{{ request.args.get('perfil', '') }}">
+        <div class="dropdown">
+          <button class="form-select shadow-none search-input text-secondary fw-medium d-flex justify-content-between align-items-center bg-white" type="button" data-bs-toggle="dropdown" style="min-width: 160px;">
+            <span id="perfilVisor">
+              {% if request.args.get('perfil') == 'administrador' %}Administrador
+              {% elif request.args.get('perfil') == 'gestor' %}Gestor
+              {% elif request.args.get('perfil') in ['usuario', 'colaborador'] %}Colaborador
+              {% else %}Perfil (Todos){% endif %}
+            </span>
+          </button>
+          <ul class="dropdown-menu shadow-sm border-0 p-2">
+            <li><a class="dropdown-item rounded-2 opt-filter" href="#" data-input="perfilInput" data-val="">Perfil (Todos)</a></li>
+            <li><a class="dropdown-item rounded-2 opt-filter" href="#" data-input="perfilInput" data-val="administrador">Administrador</a></li>
+            <li><a class="dropdown-item rounded-2 opt-filter" href="#" data-input="perfilInput" data-val="gestor">Gestor</a></li>
+            <li><a class="dropdown-item rounded-2 opt-filter" href="#" data-input="perfilInput" data-val="usuario">Colaborador</a></li>
+          </ul>
+        </div>
+
+        {% if request.args.get('q') or request.args.get('perfil') %}
+          <a href="{{ url_for('admin.lista_usuarios', status=request.args.get('status', '')) }}" class="btn btn-link text-muted text-decoration-none fw-bold px-2 small">Limpar</a>
+        {% endif %}
       </div>
-    </div>
 
-    <div class="table-responsive mt-3 fluid-table-container" style="overflow-x: auto; transition: opacity 0.2s;">
-      <table class="table-corp">
+      <div class="d-flex align-items-center gap-2 flex-shrink-0 text-muted small pt-1">
+        <label class="mb-0 fw-medium text-nowrap">Exibir:</label>
+        <input type="hidden" name="per_page" id="perPageInput" value="{{ request.args.get('per_page', '10') }}">
+        <div class="dropdown">
+          <button class="form-select shadow-none search-input text-secondary fw-medium d-flex justify-content-between align-items-center bg-white" type="button" data-bs-toggle="dropdown" style="min-width: 120px;">
+            <span id="perPageVisor">{{ request.args.get('per_page', '10') }} linhas</span>
+          </button>
+          <ul class="dropdown-menu shadow-sm border-0 p-2 dropdown-menu-end">
+            <li><a class="dropdown-item rounded-2 opt-filter" href="#" data-input="perPageInput" data-val="10">10 linhas</a></li>
+            <li><a class="dropdown-item rounded-2 opt-filter" href="#" data-input="perPageInput" data-val="25">25 linhas</a></li>
+            <li><a class="dropdown-item rounded-2 opt-filter" href="#" data-input="perPageInput" data-val="50">50 linhas</a></li>
+          </ul>
+        </div>
+      </div>
+    </form>
+
+    <div class="table-responsive">
+      <table class="table-corp table-layout-fixed w-100 mb-0">
         <thead>
           <tr>
-            <th style="width: 35%;">
-              <a href="{{ url_for('admin.lista_usuarios', sort='nome', dir='desc' if request.args.get('sort')=='nome' and request.args.get('dir')=='asc' else 'asc', q=request.args.get('q'), perfil=request.args.get('perfil'), status=request.args.get('status')) }}" class="fluid-link text-decoration-none text-dark d-flex align-items-center gap-1">
-                Nome do Usuário
-                <i class="bi bi-arrow-{% if request.args.get('sort')=='nome' %}{% if request.args.get('dir')=='asc' %}up{% else %}down{% endif %}{% else %}down-up text-muted opacity-50{% endif %}" style="font-size: 0.75rem;"></i>
-              </a>
-            </th>
-            <th>E-mail</th>
-            <th style="width: 140px; text-align: center;">Perfil & Status</th>
-            <th>
-              <a href="{{ url_for('admin.lista_usuarios', sort='data', dir='asc' if request.args.get('sort')=='data' and request.args.get('dir')=='desc' else 'desc', q=request.args.get('q'), perfil=request.args.get('perfil'), status=request.args.get('status')) }}" class="fluid-link text-decoration-none text-dark d-flex align-items-center gap-1">
-                Criado em
-                <i class="bi bi-arrow-{% if request.args.get('sort')=='data' %}{% if request.args.get('dir')=='asc' %}up{% else %}down{% endif %}{% else %}down-up text-muted opacity-50{% endif %}" style="font-size: 0.75rem;"></i>
-              </a>
-            </th>
-            <th style="width: 120px; text-align: center;">Ações</th> 
+            <th class="text-center" style="width: 15%; min-width: 100px;">ID</th>
+            <th style="width: auto; min-width: 220px;">NOME / E-MAIL</th>
+            <th class="text-center" style="width: 25%; min-width: 130px;">PERFIL DE ACESSO</th>
           </tr>
         </thead>
         <tbody>
-          {% for u in usuarios.items %}
-          <tr style="vertical-align: middle; {% if not u.ativo %}opacity: 0.6;{% endif %}">
-            
-            <td>
-              <div class="d-flex align-items-center gap-3">
-                <div class="rounded-circle d-flex align-items-center justify-content-center fw-bold"
-                     style="width: 36px; height: 36px; background-color: var(--sgd-bg); color: var(--sgd-blue); font-size: 0.9rem;">
-                  {{ u.nome[0]|upper }}
+          {% if lista and lista.items|length > 0 %}
+            {% for u in lista.items %}
+            <tr class="data-row row-clickable {% if not u.ativo %}row-inativa{% endif %}" data-href="{{ url_for('admin.detalhe_usuario', uid=u.id) }}">
+              
+              <td class="text-center">
+                <span class="badge bg-light text-dark border shadow-sm font-monospace">USR-{{ "%04d"|format(u.id) }}</span>
+              </td>
+              
+              <td>
+                <div class="d-flex align-items-center gap-3">
+                  {{ render_avatar(u.nome, u.perfil.value, 'sm', 'shadow-sm') }}
+                  <div style="min-width: 0; flex: 1;">
+                    <span class="item-link d-flex align-items-center gap-2" title="{{ u.nome }}">
+                      <span class="d-inline-block text-truncate">{{ u.nome }}</span>
+                      {% if current_user.id == u.id %}<span class="badge bg-secondary flex-shrink-0" style="font-size: 0.65rem;">VOCÊ</span>{% endif %}
+                    </span>
+                    <span class="item-meta text-truncate">{{ u.email }}</span>
+                  </div>
                 </div>
-                <div>
-                  <span class="d-block fw-bold" style="color: var(--sgd-navy);">
-                    {{ u.nome | smart_title }}
-                  </span>
-                  {% if u.criado_por %}
-                  <span style="font-size: 0.7rem; color: #9ca3af;">Criado por: {{ u.criado_por.nome.split()[0] | smart_title }}</span>
-                  {% endif %}
-                </div>
-              </div>
-            </td>
-            
-            <td style="color: #4b5563; font-size: 0.85rem;">{{ u.email }}</td>
-            
-            <td style="text-align: center;">
-              <div class="d-flex justify-content-center align-items-center gap-1">
-                {% if u.perfil == 'administrador' %}
-                  <span class="badge-perfil" style="background: var(--sgd-navy); color: white; border: 1px solid rgba(255,255,255,0.1);">Admin</span>
-                {% elif u.perfil == 'gestor' %}
-                  <span class="badge-perfil gestor">Gestor</span>
-                {% else %}
-                  <span class="badge-perfil usuario">Usuário</span>
-                {% endif %}
-                
-                {% if u.ativo %}
-                  <span class="badge bg-success" style="font-size: 0.65rem; padding: 0.35em 0.5em;">Ativo</span>
-                {% else %}
-                  <span class="badge bg-danger" style="font-size: 0.65rem; padding: 0.35em 0.5em;">Inativo</span>
-                {% endif %}
-              </div>
-            </td>
-            
-            <td style="font-size: 0.85rem; color: #6b7280;">{{ u.data_criacao.strftime('%d/%m/%Y') }}</td>
-            
-            <td style="text-align: center;">
-              {% if u.id == current_user.id %}
-                <span style="color: #d1d5db; font-size: 0.8rem; font-weight: 500;" data-bs-toggle="tooltip" data-bs-title="Você não pode inativar a si mesmo">Você</span>
-              {% elif current_user.is_admin or (current_user.is_gestor and u.criado_por_id == current_user.id) %}
-                
-                {% if u.ativo %}
-                  <button type="button" class="btn btn-link p-0 btn-delete-user" 
-                          data-bs-toggle="modal" data-bs-target="#modalStatus" 
-                          data-uid="{{ u.id }}" data-unome="{{ u.nome | smart_title }}" data-acao="inativar"
-                          data-bs-toggle="tooltip" data-bs-title="Inativar Usuário">
-                    <i class="bi bi-person-x"></i>
-                  </button>
-                {% else %}
-                  <button type="button" class="btn btn-link p-0" style="color: #10b981; font-size: 1.1rem; transition: transform 0.2s;" 
-                          data-bs-toggle="modal" data-bs-target="#modalStatus" 
-                          data-uid="{{ u.id }}" data-unome="{{ u.nome | smart_title }}" data-acao="reativar"
-                          data-bs-toggle="tooltip" data-bs-title="Restaurar Acesso" 
-                          onmouseover="this.style.transform='scale(1.1)'" onmouseout="this.style.transform='scale(1)'">
-                    <i class="bi bi-person-check-fill"></i>
-                  </button>
-                {% endif %}
-
-              {% else %}
-                <span style="color: #d1d5db; font-size: 0.8rem;">—</span>
-              {% endif %}
-            </td>
-
-          </tr>
+              </td>
+              
+              <td class="col-perfil text-center">
+                {% set p_val = u.perfil.value | lower %}
+                {% set p_label = 'Usuário' if p_val == 'usuario' else p_val | title %}
+                <span class="status-pill pill-perfil-{{ p_val }}">{{ p_label }}</span>
+              </td>
+              
+            </tr>
+            {% endfor %}
           {% else %}
-          <tr>
-            <td colspan="5">
-              <div class="empty-state">
-                <i class="bi bi-search" style="font-size: 2.5rem; color: #d1d5db;"></i>
-                <p class="mt-2">Nenhum usuário encontrado.</p>
-              </div>
-            </td>
-          </tr>
-          {% endfor %}
+            <tr>
+              <td colspan="3" class="text-center py-5">
+                <i class="bi bi-people text-neutral-300 fs-1"></i>
+                <p class="mt-2 text-muted small">Nenhum usuário encontrado com os filtros atuais.</p>
+              </td>
+            </tr>
+          {% endif %}
         </tbody>
       </table>
     </div>
 
-    <div class="fluid-pagination-container">
-        {% if usuarios.pages > 0 %}
-        <div class="card-header-corp bg-white border-top border-bottom-0 py-3 d-flex justify-content-between align-items-center">
-          <div class="text-muted" style="font-size: 0.85rem;">
-            Exibindo <strong style="color: var(--sgd-navy);">{{ usuarios.items|length }}</strong> de <strong>{{ usuarios.total }}</strong> registros
-          </div>
-          
-          <nav>
-            <ul class="pagination pagination-sm mb-0">
-              <li class="page-item {% if not usuarios.has_prev %}disabled{% endif %}">
-                <a class="page-link fluid-link text-secondary shadow-none border-0" 
-                   href="{{ url_for('admin.lista_usuarios', page=usuarios.prev_num, q=request.args.get('q'), per_page=request.args.get('per_page', 10), perfil=request.args.get('perfil'), status=request.args.get('status'), sort=request.args.get('sort'), dir=request.args.get('dir')) if usuarios.has_prev else '#' }}"
-                   style="background-color: transparent;">
-                   <i class="bi bi-chevron-left"></i> Anterior
-                </a>
-              </li>
-              
-              <li class="page-item disabled d-none d-sm-block">
-                <span class="page-link text-dark fw-bold border-0" style="background-color: transparent;">
-                  Página {{ usuarios.page }} de {{ usuarios.pages }}
-                </span>
-              </li>
-
-              <li class="page-item {% if not usuarios.has_next %}disabled{% endif %}">
-                <a class="page-link fluid-link text-secondary shadow-none border-0" 
-                   href="{{ url_for('admin.lista_usuarios', page=usuarios.next_num, q=request.args.get('q'), per_page=request.args.get('per_page', 10), perfil=request.args.get('perfil'), status=request.args.get('status'), sort=request.args.get('sort'), dir=request.args.get('dir')) if usuarios.has_next else '#' }}"
-                   style="background-color: transparent;">
-                   Próxima <i class="bi bi-chevron-right"></i>
-                </a>
-              </li>
-            </ul>
-          </nav>
-        </div>
-        {% endif %}
-    </div>
-
+    {{ render_pagination(lista, 'admin.lista_usuarios') }}
+    
   </div>
 </div>
+{% endblock %}
 
-<div class="modal fade" id="modalStatus" tabindex="-1" aria-labelledby="modalStatusLabel" aria-hidden="true">
-  <div class="modal-dialog modal-dialog-centered">
-    <div class="modal-content" style="border-radius: 12px; border: none; box-shadow: 0 10px 30px rgba(0,0,0,0.1);">
-      <div class="modal-header border-0 pb-0">
-        <h5 class="modal-title fw-bold" id="modalStatusLabel" style="color: var(--sgd-navy);">Confirmar Ação</h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
-      </div>
-      <div class="modal-body text-secondary" style="font-size: 0.95rem;">
-        <span id="modalStatusText"></span> <strong id="modalUserName" class="text-dark"></strong>?
-      </div>
-      <div class="modal-footer border-0 pt-0">
-        <button type="button" class="btn btn-light" data-bs-dismiss="modal" style="font-weight: 600; font-size: 0.85rem;">Cancelar</button>
-        <form id="statusUserForm" method="POST" action="">
-          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
-          <button type="submit" id="modalStatusBtn" class="btn" style="font-weight: 600; font-size: 0.85rem; border-radius: 6px;">Confirmar</button>
-        </form>
-      </div>
-    </div>
-  </div>
-</div>
-
-<style>
-  .btn-delete-user {
-    color: #9ca3af; 
-    transition: color 0.2s ease, transform 0.2s ease;
-    font-size: 1.1rem;
-    text-decoration: none;
-  }
-  .btn-delete-user:hover {
-    color: #dc2626; 
-    transform: scale(1.1); 
-  }
-  /* Remove o script custom de debounce antigo pois o Motor Fluido (base.html) cuida disso agora! */
-</style>
-
+{% block scripts %}
 <script>
-  document.addEventListener('DOMContentLoaded', function () {
-    // Apenas a lógica do Modal se mantém aqui. O AJAX e Tooltips estão na base.html!
-    var modalStatus = document.getElementById('modalStatus');
-    if (modalStatus) {
-      modalStatus.addEventListener('show.bs.modal', function (event) {
-        var button = event.relatedTarget;
-        var uid = button.getAttribute('data-uid');
-        var unome = button.getAttribute('data-unome');
-        var acao = button.getAttribute('data-acao');
-        
-        modalStatus.querySelector('#modalUserName').textContent = unome;
-        modalStatus.querySelector('#statusUserForm').action = '/usuarios/' + uid + '/status';
+document.addEventListener("turbo:load", () => {
+    const form = document.getElementById('searchForm');
+    let timer;
 
-        var modalText = modalStatus.querySelector('#modalStatusText');
-        var modalBtn = modalStatus.querySelector('#modalStatusBtn');
+    document.querySelectorAll('.opt-filter').forEach(opt => {
+        opt.addEventListener('click', function(e) {
+            e.preventDefault();
+            const inputId = this.dataset.input;
+            const input = document.getElementById(inputId);
+            const visor = this.closest('.dropdown').querySelector('button span');
+            
+            input.value = this.dataset.val;
+            visor.innerText = this.innerText;
+            form.submit();
+        });
+    });
 
-        if (acao === 'inativar') {
-            modalText.textContent = 'Tem certeza que deseja INATIVAR o acesso do usuário';
-            modalBtn.textContent = 'Desativar Usuário';
-            modalBtn.className = 'btn btn-danger';
-        } else {
-            modalText.textContent = 'Deseja REATIVAR o acesso do usuário';
-            modalBtn.textContent = 'Reativar Acesso';
-            modalBtn.className = 'btn btn-success';
-        }
-      });
+    const searchInput = document.querySelector('.auto-submit-search');
+    if(searchInput) {
+        searchInput.addEventListener('input', () => {
+            clearTimeout(timer);
+            timer = setTimeout(() => form.submit(), 600);
+        });
     }
-  });
+});
 </script>
 {% endblock %}

@@ -1,0 +1,133 @@
+{# ============================================================
+   IPVP — Design System Global (Macros Jinja2)
+   Arquivo: templates/components.html
+   ============================================================ #}
+
+{# ============================================================
+   MACRO 1: BOTÃO UNIVERSAL (render_button)
+   Suporta botões nativos (<button>) e links (<a>)
+   ============================================================ #}
+{% macro render_button(text, type='button', variant='primary', icon='', href=none) %}
+  {% set variant_classes = {
+     'primary': 'btn-acao-solida',
+     'primary-lg': 'btn-acao-solida btn-acao-solida--lg',
+     'ghost': 'btn-ghost',
+     'ghost-danger': 'btn-ghost btn-ghost--danger',
+     'outline-danger': 'btn-outline-perigo'
+  } %}
+  
+  {% set btn_class = variant_classes.get(variant, 'btn-acao-solida') %}
+  {% set extra_classes = kwargs.get('class', '') %}
+
+  {% if href %}
+    <a href="{{ href }}" class="{{ btn_class }} {{ extra_classes }}" 
+       {% for key, value in kwargs.items() if key != 'class' %} {{ key }}="{{ value }}" {% endfor %}>
+      {% if icon %}<i class="bi {{ icon }}" aria-hidden="true"></i>{% endif %}
+      {% if text %}<span>{{ text }}</span>{% endif %}
+    </a>
+  {% else %}
+    <button type="{{ type }}" class="{{ btn_class }} {{ extra_classes }}"
+       {% for key, value in kwargs.items() if key != 'class' %} {{ key }}="{{ value }}" {% endfor %}>
+      {% if icon %}<i class="bi {{ icon }}" aria-hidden="true"></i>{% endif %}
+      {% if text %}<span>{{ text }}</span>{% endif %}
+    </button>
+  {% endif %}
+{% endmacro %}
+
+
+{# ============================================================
+   MACRO 2: STATUS PILL (render_status_pill)
+   ============================================================ #}
+{% macro render_status_pill(status_text) %}
+  {% set key = status_text | string | lower | trim | replace(' ', '_') | replace('í', 'i') | replace('ã', 'a') %}
+  
+  {% set class_map = {
+     'aberto': 'status-aberto',
+     'pendente': 'status-pendente',
+     'aprovado': 'status-aprovado',
+     'em_andamento': 'status-em_andamento',
+     'entregue': 'status-entregue',
+     'concluido': 'status-concluido',
+     'cancelado': 'status-cancelado',
+     'alta': 'pill-urgencia-alta',
+     'media': 'pill-urgencia-media',
+     'baixa': 'pill-urgencia-baixa'
+  } %}
+  
+  {% set css_class = class_map.get(key, 'pill-acao-default') %}
+  
+  {% if key == 'em_andamento' %}
+    {% set display_text = 'EM CURSO' %}
+  {% else %}
+    {% set display_text = status_text | replace('_', ' ') | upper %}
+  {% endif %}
+  
+  {% set extra_classes = kwargs.get('class', '') %}
+
+  <span class="status-pill {{ css_class }} {{ extra_classes }}" 
+        {% for k, v in kwargs.items() if k != 'class' %} {{ k }}="{{ v }}" {% endfor %}>
+    {{ display_text }}
+  </span>
+{% endmacro %}
+
+
+{# ============================================================
+   MACRO 3: PAGINAÇÃO (render_pagination)
+   ============================================================ #}
+{% macro render_pagination(pagination, endpoint) %}
+  {% if pagination and pagination.pages > 1 %}
+    
+    {# 1. Captura os parâmetros da URL e remove o 'page' para evitar conflitos de múltiplos valores #}
+    {% set query_args = request.args.to_dict() %}
+    {% set _ = query_args.pop('page', None) %}
+
+    <nav aria-label="Navegação de páginas" class="pagination-wrapper" 
+         {% for key, val in kwargs.items() if key != 'class' %} {{ key }}="{{ val }}" {% endfor %}>
+      
+      <div class="pagination-info">
+        Exibindo <strong class="text-dark">{{ pagination.items|length }}</strong> de <strong class="text-dark">{{ pagination.total }}</strong> registros
+      </div>
+      
+      <ul class="pagination mb-0 d-flex gap-2 list-unstyled align-items-center">
+        
+        <li class="page-item {{ 'disabled' if not pagination.has_prev else '' }}">
+          <a class="page-link" 
+             href="{{ url_for(endpoint, page=pagination.prev_num, **query_args) if pagination.has_prev else '#' }}"
+             aria-label="Página Anterior"
+             {{ 'aria-disabled="true" tabindex="-1"' if not pagination.has_prev else '' }}>
+             <i class="bi bi-chevron-left" aria-hidden="true"></i> 
+             <span>Anterior</span>
+          </a>
+        </li>
+        
+        <li class="page-item disabled" aria-current="page">
+          <span class="page-link fw-bold text-dark" style="opacity: 1;">
+             <span>Página </span>{{ pagination.page }} de {{ pagination.pages }}
+          </span>
+        </li>
+        
+        <li class="page-item {{ 'disabled' if not pagination.has_next else '' }}">
+          <a class="page-link" 
+             href="{{ url_for(endpoint, page=pagination.next_num, **query_args) if pagination.has_next else '#' }}"
+             aria-label="Próxima Página"
+             {{ 'aria-disabled="true" tabindex="-1"' if not pagination.has_next else '' }}>
+             <span>Próxima</span> 
+             <i class="bi bi-chevron-right" aria-hidden="true"></i>
+          </a>
+        </li>
+        
+      </ul>
+    </nav>
+  {% endif %}
+{% endmacro %}
+
+{# ============================================================
+   MACRO 4: AVATAR DE UTILIZADOR (render_avatar)
+   ============================================================ #}
+{% macro render_avatar(nome, perfil, tamanho='sm', class='') %}
+  {% set perfil_clean = perfil|lower|trim %}
+  <div class="avatar-circle avatar-{{ tamanho }} avatar-circle--{{ perfil_clean }} {{ class }}" 
+       title="{{ nome }}">
+    {{ nome | iniciais_avatar }}
+  </div>
+{% endmacro %}

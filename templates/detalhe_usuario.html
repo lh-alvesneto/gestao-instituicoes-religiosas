@@ -1,0 +1,291 @@
+{% extends "base.html" %}
+{% from "components.html" import render_avatar %}
+
+{% block title %}Perfil de {{ u.nome }} — IPVP{% endblock %}
+
+{% block content %}
+<div class="container-profile-limited">
+  
+  <header class="mb-4">
+    <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3">
+      <div class="d-flex align-items-start gap-3">
+        <a href="{{ url_for('admin.lista_usuarios') }}" class="btn-back flex-shrink-0" style="margin-top: 2px;" title="Voltar">
+          <i class="bi bi-arrow-left"></i>
+        </a>
+        <div>
+          <h1 class="h3 mb-1 page-title fw-bold" style="color: var(--color-primary-800);">Perfil do Usuário</h1>
+          <p class="mb-0 text-muted small mt-1">Consulte as métricas e o histórico de atividades deste colaborador.</p>
+        </div>
+      </div>
+
+      {% if current_user.pode_gerenciar and u.id != current_user.id and (current_user.is_admin or not u.is_admin) %}
+        <div class="d-flex flex-wrap align-items-center gap-2 justify-content-md-end">
+          
+          <button type="button" class="btn bg-white {% if u.ativo %}btn-outline-destructive{% else %}btn-outline-constructive{% endif %} py-2 px-3 d-flex align-items-center gap-2 fw-semibold shadow-sm" data-bs-toggle="modal" data-bs-target="#modalAlternarStatus">
+            <i class="bi {% if u.ativo %}bi-person-dash{% else %}bi-person-check{% endif %}"></i>
+            {% if u.ativo %}Inativar{% else %}Reativar{% endif %}
+          </button>
+
+          <a href="{{ url_for('admin.editar_usuario', uid=u.id, origem='perfil') }}" class="btn-acao-solida shadow-sm px-3 py-2 d-flex align-items-center gap-2">
+            <i class="bi bi-pencil-square"></i> Editar Dados
+          </a>
+
+        </div>
+      {% endif %}
+    </div>
+  </header>
+
+  <div class="card-padrao p-4 mb-4">
+    <div class="d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-4">
+      
+      <div class="d-flex align-items-center gap-3" style="min-width: 0; flex: 1;">
+        <div class="flex-shrink-0">
+          {{ render_avatar(u.nome, u.perfil.value, 'lg', 'shadow-md mx-auto') }}
+        </div>
+        <div style="min-width: 0; flex: 1;">
+          <h5 class="fw-bold text-dark mb-0 text-truncate js-tooltip-truncate">{{ u.nome }}</h5>
+          <p class="text-muted small text-truncate mb-2 js-tooltip-truncate">{{ u.email }}</p>
+          
+          <div class="d-flex align-items-center flex-wrap gap-3 mt-1">
+            <div class="mb-0">
+                {% set p_val = u.perfil.value | lower %}
+                {% set p_label = 'Usuário' if p_val == 'usuario' else p_val | title %}
+                <span class="status-pill pill-perfil-{{ p_val }} fw-semibold" style="text-transform: none !important;">{{ p_label }}</span>
+              {% if not u.ativo %}
+                <span class="badge bg-danger-subtle text-danger ms-1 border border-danger-subtle">INATIVO</span>
+              {% endif %}
+            </div>
+            <span class="text-neutral-500 small fw-normal">
+              Membro desde: <span class="fw-semibold text-neutral-900">{{ u.data_criacao.strftime('%d/%m/%Y') }}</span>
+            </span>
+          </div>
+        </div>
+      </div>
+      
+      <div class="d-flex flex-wrap gap-2">
+        <div class="p-3 border rounded-3 bg-white text-center filter-card shadow-sm d-flex flex-column justify-content-center" 
+             data-filter="solicitacao_material" 
+             data-color-border="var(--color-primary-800)" 
+             data-color-bg="#F0FDF4" 
+             style="min-width: 120px; min-height: 90px; cursor: pointer; transition: all 0.2s; border-color: var(--color-neutral-200);" 
+             title="Filtrar histórico por Materiais">
+          <span class="fs-4 fw-bold text-primary-800 d-block lh-1 mb-1 kpi-num">{{ u.materiais|length }}</span>
+          <span class="kpi-label-title text-muted" style="font-size: 0.75rem;">Materiais</span>
+        </div>
+        <div class="p-3 border rounded-3 bg-white text-center filter-card shadow-sm d-flex flex-column justify-content-center" 
+             data-filter="solicitacao_manutencao" 
+             data-color-border="#D97706" 
+             data-color-bg="#FFFBEB" 
+             style="min-width: 120px; min-height: 90px; cursor: pointer; transition: all 0.2s; border-color: var(--color-neutral-200);" 
+             title="Filtrar histórico por Manutenções">
+          <span class="fs-4 fw-bold d-block lh-1 mb-1 kpi-num" style="color: #D97706;">{{ u.manutencoes|length }}</span>
+          <span class="kpi-label-title text-muted" style="font-size: 0.75rem;">Manutenção</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card-padrao p-4">
+    <div class="d-flex justify-content-between align-items-center mb-4 border-bottom border-neutral-200 pb-2" style="min-height: 40px;">
+      <h6 class="fw-bold text-neutral-800 mb-0">Linha do Tempo de Atividades</h6>
+      <button id="btnLimparFiltroTimeline" class="btn-ghost text-neutral-500 fw-semibold small d-none align-items-center py-1 px-2 rounded" style="transition: all 0.2s;">
+        <i class="bi bi-x-circle me-1"></i> Limpar Filtro
+      </button>
+    </div>
+    
+    <div class="timeline-container px-2">
+      {% for log in atividades %}
+      <div class="d-flex gap-3 mb-4 position-relative timeline-item" data-modulo="{{ log.tabela_afetada }}">
+        <div class="flex-shrink-0 text-center" style="width: 60px;">
+          <span class="text-dark fw-bold small d-block">{{ log.data_hora.strftime('%d/%m') }}</span>
+          <span class="text-muted" style="font-size: 0.7rem;">{{ log.data_hora.strftime('%H:%M') }}</span>
+        </div>
+        <div class="vr bg-neutral-200 opacity-100" style="width: 2px;"></div>
+        <div class="pb-2 flex-grow-1">
+          {% set acao_upper = log.acao|upper %}
+          {% set cor_badge = "bg-warning-subtle text-dark border border-warning-subtle" %}
+          {% set texto_badge = acao_upper %}
+          
+          {% if acao_upper in ['CRIOU', 'CRIACAO'] %}{% set cor_badge = "bg-success-subtle text-success border border-success-subtle" %}{% set texto_badge = "CRIOU" %}
+          {% elif 'STATUS' in acao_upper %}{% set cor_badge = "bg-info-subtle text-info border border-info-subtle" %}{% set texto_badge = "STATUS" %}
+          {% elif acao_upper == 'EDITOU' %}{% set cor_badge = "bg-primary-subtle text-primary border border-primary-subtle" %}
+          {% elif acao_upper in ['EXCLUIU', 'EXCLUSAO', 'DELETOU'] %}{% set cor_badge = "bg-danger-subtle text-danger border border-danger-subtle" %}{% set texto_badge = "EXCLUIU" %}{% endif %}
+
+          {% set modulo_formatado = 'Usuário' %}
+          {% if log.tabela_afetada == 'solicitacao_manutencao' %}{% set modulo_formatado = 'Manutenção' %}
+          {% elif log.tabela_afetada == 'solicitacao_material' %}{% set modulo_formatado = 'Material' %}{% endif %}
+
+          <div class="d-flex align-items-center gap-2 mb-2">
+            <span class="badge {{ cor_badge }} px-2 py-1 small fw-bold shadow-sm" style="font-size: 0.65rem; letter-spacing: 0.5px;">{{ texto_badge }}</span>
+            <span class="text-muted small fw-medium" style="font-size: 0.75rem;">Módulo: {{ modulo_formatado }}</span>
+          </div>
+          <div class="small text-dark fw-medium lh-sm">{{ log | humanizar_auditoria | safe }}</div>
+          <div class="mt-2" style="font-size: 0.75rem;">
+            {% set link_ref = '#' %}
+            {% if log.registro_id %}
+              {% if log.tabela_afetada == 'solicitacao_material' %}
+                {% set link_ref = url_for('materiais.detalhe', mid=log.registro_id, origem='usuario', uid=u.id) %}
+              {% elif log.tabela_afetada == 'solicitacao_manutencao' %}
+                {% set link_ref = url_for('manutencao.detalhe', cid=log.registro_id, origem='usuario', uid=u.id) %}
+              {% elif log.tabela_afetada == 'usuario' %}
+                {% set link_ref = url_for('admin.detalhe_usuario', uid=log.registro_id) %}
+              {% endif %}
+            {% endif %}
+            
+            <a href="{{ link_ref }}" class="text-primary-800 text-decoration-none fw-bold hover-primary-600">
+              <i class="bi bi-box-arrow-up-right me-1"></i>REF: {{ log.tabela_afetada.split('_')[-1]|upper }}-{{ "%04d"|format(log.registro_id) if log.registro_id else "N/A" }}
+            </a>
+          </div>
+        </div>
+      </div>
+      {% else %}
+      <div class="text-center py-4">
+        <i class="bi bi-clock-history text-neutral-300 fs-2"></i>
+        <p class="text-muted small mt-2">Nenhuma atividade recente registrada para este usuário.</p>
+      </div>
+      {% endfor %}
+      <div id="empty-filter-timeline" class="text-center py-4" style="display: none;">
+        <i class="bi bi-funnel text-neutral-300 fs-2"></i>
+        <p class="text-muted small mt-2">Nenhuma atividade recente encontrada para esta categoria.</p>
+      </div>
+    </div>
+  </div>
+
+  {% if current_user.pode_gerenciar and u.id != current_user.id and (current_user.is_admin or not u.is_admin) %}
+  <div class="modal fade" id="modalAlternarStatus" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content rounded-3 border-0 shadow-lg">
+        <div class="modal-header border-0 pb-0">
+          <h5 class="modal-title fw-bold {% if u.ativo %}text-danger{% else %}text-success{% endif %}">
+            {% if u.ativo %}Desabilitar Usuário{% else %}Reativar Usuário{% endif %}
+          </h5>
+          <button type="button" class="btn-close shadow-none" data-bs-dismiss="modal" aria-label="Fechar"></button>
+        </div>
+        <div class="modal-body py-3">
+          <p class="text-secondary mb-1">Confirmar alteração para o usuário:</p>
+          <p class="fw-bold text-dark fs-5 mb-2">{{ u.nome }}</p>
+          <p class="small text-muted mb-0">
+            {% if u.ativo %}
+              O usuário deixará de ter acesso ao sistema imediatamente.
+            {% else %}
+              O usuário voltará a ter acesso normal ao sistema.
+            {% endif %}
+          </p>
+        </div>
+        <div class="modal-footer border-0 pt-0 d-flex justify-content-between">
+          <button type="button" class="btn btn-light fw-medium rounded-3" data-bs-dismiss="modal">Cancelar</button>
+          <form action="{{ url_for('admin.alternar_status', uid=u.id) }}" method="POST" class="m-0" id="formAlternarStatus">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button type="submit" class="btn {% if u.ativo %}btn-danger{% else %}btn-success{% endif %} px-4 fw-bold rounded-3" id="btnConfirmarStatus">
+              <i class="bi {% if u.ativo %}bi-person-dash{% else %}bi-person-check{% endif %} me-2"></i>{% if u.ativo %}Desabilitar{% else %}Reativar{% endif %}
+            </button>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener("turbo:load", () => {
+    const cards = document.querySelectorAll('.filter-card');
+    const items = document.querySelectorAll('.timeline-item');
+    const btnLimpar = document.getElementById('btnLimparFiltroTimeline');
+    const emptyFilter = document.getElementById('empty-filter-timeline');
+
+    cards.forEach(card => {
+        card.addEventListener('click', function() {
+            const modulo = this.dataset.filter;
+            let countVisible = 0;
+            items.forEach(item => {
+                if (item.dataset.modulo === modulo) { item.classList.remove('d-none'); item.classList.add('d-flex'); countVisible++; }
+                else { item.classList.remove('d-flex'); item.classList.add('d-none'); }
+            });
+            cards.forEach(c => {
+                const isActive = (c === this);
+                c.style.opacity = isActive ? '1' : '0.6';
+                c.style.borderColor = isActive ? c.dataset.colorBorder : 'var(--color-neutral-200)';
+                c.style.backgroundColor = isActive ? c.dataset.colorBg : '#FFFFFF';
+                c.style.borderWidth = isActive ? '2px' : '1px';
+                c.classList.toggle('shadow', isActive);
+                c.classList.toggle('shadow-sm', !isActive);
+            });
+            if(btnLimpar) { btnLimpar.classList.remove('d-none'); btnLimpar.classList.add('d-flex'); }
+            if(emptyFilter) emptyFilter.style.display = countVisible === 0 ? 'block' : 'none';
+        });
+    });
+
+    if(btnLimpar) {
+        btnLimpar.addEventListener('click', function(e) {
+            e.preventDefault();
+            items.forEach(item => { item.classList.remove('d-none'); item.classList.add('d-flex'); });
+            cards.forEach(c => {
+                c.style.opacity = '1';
+                c.style.borderColor = 'var(--color-neutral-200)';
+                c.style.backgroundColor = '#FFFFFF';
+                c.style.borderWidth = '1px';
+                c.classList.add('shadow-sm');
+                c.classList.remove('shadow');
+            });
+            this.classList.remove('d-flex');
+            this.classList.add('d-none');
+            if(emptyFilter) emptyFilter.style.display = 'none';
+        });
+    }
+
+    const formStatus = document.getElementById('formAlternarStatus');
+    if (formStatus) {
+        formStatus.addEventListener('submit', function() {
+            const btn = document.getElementById('btnConfirmarStatus');
+            if(btn) {
+                btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Processando...';
+                btn.classList.add('disabled');
+                btn.style.pointerEvents = 'none';
+            }
+        });
+    }
+
+    const checkAndInitTooltip = (el) => {
+        const isTruncated = el.scrollWidth > el.offsetWidth;
+        if (isTruncated) {
+            if (!bootstrap.Tooltip.getInstance(el)) {
+                new bootstrap.Tooltip(el, { title: el.innerText, placement: 'top', trigger: 'hover' });
+            }
+        } else {
+            const t = bootstrap.Tooltip.getInstance(el);
+            if (t) t.dispose();
+        }
+    };
+
+    document.querySelectorAll('.js-tooltip-truncate').forEach(el => {
+        el.addEventListener('mouseenter', () => checkAndInitTooltip(el));
+    });
+});
+</script>
+
+<style>
+  .hover-primary-600:hover { color: var(--color-primary-600) !important; }
+  
+  .btn-outline-constructive {
+    color: #166534;
+    border: 1px solid rgba(22, 101, 52, 0.3);
+    border-radius: var(--radius-md); transition: all 0.2s ease;
+  }
+  .btn-outline-constructive:hover {
+    background-color: #DCFCE7 !important; color: #14532D; border-color: #86EFAC;
+  }
+  
+  .btn-outline-destructive {
+    color: #B91C1C;
+    border: 1px solid rgba(185, 28, 28, 0.3);
+    border-radius: var(--radius-md); transition: all 0.2s ease;
+  }
+  .btn-outline-destructive:hover {
+    background-color: #FEE2E2 !important; color: #991B1B; border-color: #FCA5A5;
+  }
+</style>
+{% endblock %}

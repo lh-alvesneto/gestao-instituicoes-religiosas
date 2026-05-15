@@ -1,75 +1,112 @@
 {% extends "base.html" %}
+{% from "components.html" import render_button %}
 
-{% block title %}{% if editando %}Editar Solicitação{% else %}Nova Solicitação de Material{% endif %} — IPVP{% endblock %}
+{% block title %}{% if editando %}Editar Solicitação — IPVP{% else %}Nova Solicitação — IPVP{% endif %}{% endblock %}
+
+{% block header_content %}
+  <div class="d-flex flex-column w-100">
+    <div class="d-flex align-items-start gap-3 mb-4">
+      <a href="{{ url_for('materiais.lista') }}" class="btn-back flex-shrink-0 mt-1" title="Voltar" aria-label="Voltar">
+        <i class="bi bi-arrow-left"></i>
+      </a>
+      <div>
+        <h1 class="h3 mb-1 page-title fw-bold text-primary-800">
+          {% if editando %}Editar Solicitação de Material{% else %}Solicitar Material{% endif %}
+        </h1>
+        <p class="mb-0 text-muted small mt-1">Preencha os dados abaixo para enviar o pedido ao estoque.</p>
+      </div>
+    </div>
+  </div>
+{% endblock %}
 
 {% block content %}
 <div class="container-fluid p-0">
-
-  <div class="mb-4">
-    <a href="{{ url_for('materiais.lista') }}" class="text-decoration-none mb-2 d-inline-block" style="color: #6b7280; font-size: 0.85rem; font-weight: 600;">
-      <i class="bi bi-arrow-left me-1"></i> Voltar para Materiais
-    </a>
-    <h1 class="h3 mb-0" style="font-weight: 800; color: var(--sgd-navy);">
-      <i class="bi {% if editando %}bi-pencil-square{% else %}bi-box-seam{% endif %} me-2" style="color: var(--sgd-blue);"></i>
-      {% if editando %}Editar Solicitação{% else %}Nova Solicitação de Material{% endif %}
-    </h1>
-  </div>
-
   <div class="row">
-    <div class="col-12 col-xl-6 col-lg-8"> 
-      
-      <div class="card-corp">
-        <div class="card-header-corp d-flex align-items-center gap-2">
-          <i class="bi {% if editando %}bi-pencil{% else %}bi-plus-circle{% endif %} text-muted"></i>
-          <h6 class="mb-0">{% if editando %}Atualize os dados abaixo{% else %}Preencha os dados da solicitação{% endif %}</h6>
-        </div>
-        
-        <div class="p-4">
-          <form method="POST" action="{{ url_for('materiais.editar', mid=sol.id) if editando else url_for('materiais.novo') }}">
-           <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/> 
-            <div class="mb-4">
-              <label for="nome_material" class="form-label-corp">Nome do Material <span class="text-danger">*</span></label>
-              <input type="text" class="form-control input-corp" id="nome_material" name="nome_material" 
-                     placeholder="Ex.: Resma de Papel A4, Cartuchos HP, Toner..." 
-                     value="{{ sol.nome_material if editando else '' }}" required autofocus>
-            </div>
-            
-            <div class="mb-4">
-              <label for="quantidade" class="form-label-corp">Quantidade <span class="text-danger">*</span></label>
-              <input type="number" class="form-control input-corp" id="quantidade" name="quantidade" 
-                     value="{{ sol.quantidade if editando else '1' }}" min="1" required style="max-width: 150px;">
-            </div>
-            
-            <div class="mb-4">
-              <label for="justificativa" class="form-label-corp">Justificativa <span class="text-danger">*</span></label>
-              <textarea class="form-control input-corp" id="justificativa" name="justificativa" 
-                        rows="4" placeholder="Descreva a necessidade e onde o material será utilizado..." required>{{ sol.justificativa if editando else '' }}</textarea>
+    <div class="col-12 col-xl-8 mx-auto">
+      <div class="card-padrao">
+        <form id="mainForm" method="POST" action="{% if editando %}{{ url_for('materiais.editar', mid=sol.id) }}{% else %}{{ url_for('materiais.novo') }}{% endif %}" class="pb-2">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+
+          <div class="row mb-5 align-items-end">
+            <div class="col-md-8 mb-3 mb-md-0 position-relative" id="containerMaterial">
+              <div class="d-flex justify-content-between align-items-baseline mb-2">
+                  <label for="nome_material" class="form-label fw-semibold text-neutral-700 mb-0">
+                    Item solicitado<span class="text-danger ms-1">*</span>
+                  </label>
+                  <span id="counter-nome_material" class="text-muted fw-normal" style="font-size: 12px;">0/150</span>
+              </div>
+              <input type="text" class="form-control form-input input-height-strict shadow-none" id="nome_material" name="nome_material" 
+                     value="{{ sol.nome_material if editando else '' }}" required maxlength="150" placeholder="Digite o nome do material..." autocomplete="off">
+              <div id="loadingIcon" class="spinner-border spinner-border-sm text-secondary position-absolute d-none" style="right: 18px; bottom: 15px;" role="status"></div>
+              <div id="sugestoesBox" class="autocomplete-box"></div>
             </div>
 
-            {% if editando and current_user.pode_gerenciar %}
-            <div class="mb-4 p-3 rounded" style="background-color: #fef2f2; border: 1px solid #fca5a5;">
-              <label for="justificativa_edicao" class="form-label-corp text-danger" style="font-weight: 700;">Motivo da Edição (Auditoria) <span class="text-danger">*</span></label>
-              <input type="text" class="form-control input-corp" id="justificativa_edicao" name="justificativa_edicao" 
-                     placeholder="Ex: Correção de quantidade, ajuste de nome..." required>
+            <div class="col-md-4">
+              <div class="d-flex justify-content-between align-items-baseline mb-2">
+                  <label for="qtdInput" class="form-label fw-semibold text-neutral-700 mb-0">
+                    Quantidade<span class="text-danger ms-1">*</span>
+                  </label>
+              </div>
+              <div class="input-group input-height-strict">
+                <button class="btn btn-stepper btn-qtd-minus" type="button" style="border-radius: var(--radius-md) 0 0 var(--radius-md); border-right: none;">
+                  <i class="bi bi-dash fs-5"></i>
+                </button>
+                <input type="number" id="qtdInput" name="quantidade" class="form-control input-stepper text-center shadow-none fs-5 fw-semibold text-dark input-height-strict" 
+                       value="{{ sol.quantidade if editando else 1 }}" min="1" required>
+                <button class="btn btn-stepper btn-qtd-plus" type="button" style="border-radius: 0 var(--radius-md) var(--radius-md) 0; border-left: none;">
+                  <i class="bi bi-plus fs-5"></i>
+                </button>
+              </div>
             </div>
-            {% endif %}
+          </div>
 
-            <div class="d-flex justify-content-end gap-3 mt-4 pt-4 border-top">
-              <a href="{{ url_for('materiais.lista') }}" class="btn btn-light" style="font-weight: 600; font-size: 0.9rem; padding: 10px 20px; color: #4b5563; border-color: #d1d5db;">
-                Cancelar
-              </a>
-              <button type="submit" class="btn-corp-primary d-flex align-items-center gap-2" style="font-size: 0.9rem; padding: 10px 20px; border: none; box-shadow: none;">
-                <i class="bi {% if editando %}bi-check-lg{% else %}bi-send{% endif %}"></i> 
-                {% if editando %}Salvar Alterações{% else %}Enviar Solicitação{% endif %}
-              </button>
+          <div class="mb-5">
+            <div class="d-flex justify-content-between align-items-baseline mb-2">
+                <label for="justificativa" class="form-label fw-semibold text-neutral-700 mb-0">
+                  Finalidade / Justificativa<span class="text-danger ms-1">*</span>
+                </label>
+                <span id="counter-justificativa" class="text-muted fw-normal" style="font-size: 12px;">0/500</span>
             </div>
-            
-          </form>
-        </div>
+            <textarea class="form-control form-input shadow-none" id="justificativa" name="justificativa" rows="4" required maxlength="500" placeholder="Para que o item será utilizado?">{{ sol.justificativa if editando else '' }}</textarea>
+          </div>
+
+          {% if editando %}
+          <div class="mb-5 p-4 rounded-3 bg-danger-subtle border border-danger-subtle">
+            <div class="d-flex justify-content-between align-items-baseline mb-2">
+                <label for="justificativa_edicao" class="form-label text-danger fw-semibold mb-0">
+                  <i class="bi bi-shield-lock me-1"></i> Motivo da alteração<span class="text-danger ms-1">*</span>
+                </label>
+                <span id="counter-justificativa_edicao" class="text-danger fw-normal" style="font-size: 12px;">0/200</span>
+            </div>
+            <input type="text" class="form-control form-input shadow-none border-danger input-height-strict" id="justificativa_edicao" name="justificativa_edicao" required maxlength="200" placeholder="Por que está a editar este pedido?">
+          </div>
+          {% endif %}
+
+          <div class="d-flex justify-content-end pt-4 mt-4 border-top border-neutral-200">
+            {% set btn_txt = 'Atualizar Solicitação' if editando else 'Enviar Solicitação' %}
+            {{ render_button(btn_txt, icon='bi-send-check', type='submit', id='btnSubmit', class='btn-acao-solida input-height-strict px-5') }}
+          </div>
+        </form>
       </div>
-
     </div>
   </div>
-
 </div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Mantida a lógica original de mainForm e incrementos
+document.addEventListener("turbo:load", () => {
+  // Lógica de Autocomplete e Stepper herdam os IDs preservados
+  // Event Delegation para Botões de Quantidade
+  document.addEventListener('click', function(e) {
+      const btnMinus = e.target.closest('.btn-qtd-minus');
+      const btnPlus = e.target.closest('.btn-qtd-plus');
+      const input = document.getElementById('qtdInput');
+      if (!input) return;
+      if (btnMinus) { input.value = Math.max(1, (parseInt(input.value) || 1) - 1); }
+      else if (btnPlus) { input.value = (parseInt(input.value) || 1) + 1; }
+  });
+});
+</script>
 {% endblock %}

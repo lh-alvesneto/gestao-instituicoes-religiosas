@@ -1,84 +1,133 @@
 {% extends "base.html" %}
+{% from "components.html" import render_button %}
 
-{% block title %}Novo Usuário — IPVP{% endblock %}
+{% block title %}{% if editando %}Editar Usuário — IPVP{% else %}Novo Usuário — IPVP{% endif %}{% endblock %}
+
+{% block header_content %}
+  {% set back_url = url_for('admin.lista_usuarios') %}
+  {% if request.args.get('origem') == 'perfil' %}
+      {% set back_url = url_for('admin.detalhe_usuario', uid=u.id) %}
+  {% endif %}
+
+  <div class="d-flex flex-column">
+    <div class="d-flex align-items-start gap-3">
+      <a href="{{ back_url }}" class="btn-back flex-shrink-0" style="margin-top: 2px;" title="Voltar">
+        <i class="bi bi-arrow-left"></i>
+      </a>
+      <h1 class="h3 mb-0 page-title fw-bold text-primary-800 lh-sm">
+        {% if editando %}Editar acessos do usuário{% else %}Cadastrar novo usuário{% endif %}
+      </h1>
+    </div>
+    <p class="mb-0 text-muted small mt-1 ms-5">
+      Defina as credenciais, o nível de acesso e o status operacional deste colaborador.
+    </p>
+  </div>
+{% endblock %}
 
 {% block content %}
 <div class="container-fluid p-0">
-
-  <div class="mb-4">
-    <a href="{{ url_for('admin.lista_usuarios') }}" class="text-decoration-none mb-2 d-inline-block" style="color: #6b7280; font-size: 0.85rem; font-weight: 600;">
-      <i class="bi bi-arrow-left me-1"></i> Voltar para Usuários
-    </a>
-    <h1 class="h3 mb-0" style="font-weight: 800; color: var(--sgd-navy);">
-      <i class="bi bi-person-plus me-2" style="color: var(--sgd-blue);"></i>Novo Usuário
-    </h1>
-    <p class="text-muted mb-0" style="font-size: 0.9rem;">Cadastre um novo membro ou colaborador no sistema.</p>
-  </div>
-
   <div class="row">
-    <div class="col-12 col-xl-6 col-lg-8"> 
+    <div class="col-12 col-xl-8 mx-auto">
       
-      <div class="card-corp">
-        <div class="card-header-corp">
-          <h6>Informações de Acesso</h6>
-        </div>
-        
-        <div class="p-4">
-          <form method="POST" action="{{ url_for('admin.novo_usuario') }}">
-           <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
-            <div class="mb-4">
-              <label for="nome" class="form-label-corp">Nome Completo <span class="text-danger">*</span></label>
-              <input type="text" class="form-control input-corp" id="nome" name="nome" 
-                     placeholder="Ex: João da Silva" required autofocus>
-            </div>
+      <div class="card-padrao p-4 p-xl-5">
+        <form id="mainForm" method="POST" action="{% if editando %}{{ url_for('admin.editar_usuario', uid=u.id) }}{% else %}{{ url_for('admin.novo_usuario') }}{% endif %}">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+
+          <div class="form-grid-layout" style="display: grid; grid-template-columns: 1fr 1fr; row-gap: 24px; column-gap: 24px;">
             
-            <div class="mb-4">
-              <label for="email" class="form-label-corp">E-mail de Acesso <span class="text-danger">*</span></label>
-              <input type="email" class="form-control input-corp" id="email" name="email" 
-                     placeholder="Ex: joao@dominio.com" required>
+            <div class="grid-item">
+              <label for="nome" class="form-label fw-semibold text-neutral-600">Nome completo <span class="text-danger"> *</span></label>
+              <input type="text" class="form-control form-input shadow-none" id="nome" name="nome" 
+                     value="{{ u.nome if editando else '' }}" required placeholder="Ex: João da Silva">
             </div>
-            
-            <div class="row mb-4">
-              <div class="col-md-6 mb-4 mb-md-0">
-                <label for="senha" class="form-label-corp">Senha Provisória <span class="text-danger">*</span></label>
-                <input type="password" class="form-control input-corp" id="senha" name="senha" 
-                       placeholder="Mínimo 6 caracteres" required>
+
+            <div class="grid-item">
+              <label for="email" class="form-label fw-semibold text-neutral-600">E-mail de acesso <span class="text-danger"> *</span></label>
+              <input type="email" class="form-control form-input shadow-none" id="email" name="email" 
+                     value="{{ u.email if editando else '' }}" required placeholder="joao@exemplo.com">
+            </div>
+
+            <div class="grid-item" style="grid-column: span 2;">
+              <label for="perfil" class="form-label fw-semibold text-neutral-600">Perfil de acesso <span class="text-danger"> *</span></label>
+              <div class="d-flex gap-2"> {% for p in perfis %}
+                {% set p_label = "Usuário" if p == 'usuario' else p | title %}
+                <div class="radio-card-perfil" style="flex: 1;">
+                  <input type="radio" name="perfil" id="perfil_{{ p }}" value="{{ p }}" 
+                         {% if (u and u.perfil.value == p) or (not editando and p == 'usuario') %}checked{% endif %} required>
+                  <label for="perfil_{{ p }}" class="w-100">{{ p_label }}</label>
+                </div>
+                {% endfor %}
               </div>
-              
-              <div class="col-md-6">
-                <label for="perfil" class="form-label-corp">Perfil de Acesso <span class="text-danger">*</span></label>
-                <select class="form-select input-corp" id="perfil" name="perfil" required>
-                  {% for p in perfis %}
-                    <option value="{{ p }}" {% if p == 'usuario' %}selected{% endif %}>
-                      {{ p.capitalize() }}
-                    </option>
-                  {% endfor %}
-                </select>
+            </div>
+            
+            <div class="grid-item">
+              <label for="senha" class="form-label fw-semibold text-neutral-600">
+                {% if editando %}Redefinir senha (opcional){% else %}Senha de acesso <span class="text-danger"> *</span>{% endif %}
+              </label>
+              <div class="password-field-wrapper">
+                <input type="password" class="form-control form-input shadow-none" id="senha" name="senha" 
+                       {% if not editando %}required{% endif %} placeholder="Min. 6 caracteres">
+                <button type="button" class="password-toggle-btn" aria-label="Mostrar senha"><i class="bi bi-eye"></i></button>
               </div>
             </div>
 
-            <div class="alert mt-4 mb-5" style="background-color: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe; border-radius: 8px; font-size: 0.85rem; display: flex; gap: 12px; align-items: center; padding: 16px;">
-              <i class="bi bi-shield-lock-fill" style="font-size: 1.4rem;"></i>
-              <div style="line-height: 1.4;">
-                <strong>Segurança:</strong> A senha digitada acima é armazenada de forma irreversível e protegida por criptografia de alto padrão.
+            {% if editando %}
+            <div class="grid-item" style="grid-column: span 2;">
+              <div class="p-4 rounded-3" style="background-color: #FEF2F2; border: 1px solid var(--color-neutral-200);">
+                <div class="d-flex align-items-center gap-2 mb-2">
+                    <i class="bi bi-shield-lock text-danger"></i>
+                    <label for="justificativa_edicao" class="form-label fw-semibold text-neutral-600 mb-0">
+                      Justificativa da alteração <span class="text-danger"> *</span>
+                    </label>
+                </div>
+                <input type="text" class="form-control form-input shadow-none bg-white" id="justificativa_edicao" name="justificativa_edicao" required maxlength="200" placeholder="Por que você está alterando os dados deste usuário?">
               </div>
             </div>
+            {% endif %}
+          </div>
 
-            <div class="d-flex justify-content-end gap-3 mt-4 pt-4 border-top">
-              <a href="{{ url_for('admin.lista_usuarios') }}" class="btn btn-light" style="font-weight: 600; font-size: 0.9rem; padding: 10px 20px; color: #4b5563; border-color: #d1d5db;">
-                Cancelar
-              </a>
-              <button type="submit" class="btn-corp-primary" style="font-size: 0.9rem; padding: 10px 20px; border: none; box-shadow: none;">
-                <i class="bi bi-check-lg me-1"></i> Criar Usuário
-              </button>
-            </div>
-            
-          </form>
-        </div>
+          <hr class="my-5 border-neutral-200">
+          
+          <div class="d-flex justify-content-end align-items-center gap-3">
+            <a href="{{ back_url }}" class="btn-outline-neutral px-4 py-2 text-decoration-none" style="color: var(--color-neutral-600); font-weight: 400;">
+              Cancelar
+            </a>
+            {{ render_button('Salvar alterações' if editando else 'Criar usuário', icon='bi-check2-circle', type='submit', id='btnSubmit', class='btn-acao-solida px-4') }}
+          </div>
+        </form>
       </div>
-
     </div>
   </div>
-
 </div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener("turbo:load", () => {
+    document.querySelectorAll('.password-toggle-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const input = this.closest('.password-field-wrapper').querySelector('input');
+            const icon = this.querySelector('i');
+            if (input.type === 'password') { 
+                input.type = 'text'; 
+                icon.classList.replace('bi-eye', 'bi-eye-slash'); 
+            } else { 
+                input.type = 'password'; 
+                icon.classList.replace('bi-eye-slash', 'bi-eye'); 
+            }
+        });
+    });
+
+    const mainForm = document.getElementById('mainForm');
+    if (mainForm) {
+        mainForm.addEventListener('submit', function() {
+            if (this.checkValidity()) {
+                const btn = document.getElementById('btnSubmit');
+                btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Salvando...';
+                btn.classList.add('disabled');
+            }
+        });
+    }
+});
+</script>
 {% endblock %}

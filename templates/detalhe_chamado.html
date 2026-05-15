@@ -1,209 +1,323 @@
 {% extends "base.html" %}
+{% from "components.html" import render_status_pill, render_button, render_avatar %}
 
-{% block title %}Detalhes do Chamado #{{ chamado.id }} — IPVP{% endblock %}
+{% block title %}Detalhes do Chamado #{{ "%04d"|format(chamado.id) }} — IPVP{% endblock %}
+
+{% block header_content %}
+  <div class="d-flex flex-column">
+    <div class="d-flex align-items-center gap-3">
+      <a href="{% if request.args.get('origem') == 'historico' %}{{ url_for('dashboard.historico', aba='manutencoes') }}{% else %}{{ url_for('manutencao.lista') }}{% endif %}" 
+         class="btn-back flex-shrink-0" title="Voltar para a lista">
+        <i class="bi bi-arrow-left"></i>
+      </a>
+      <h1 class="h3 mb-0 page-title fw-bold text-primary-800 lh-sm">Detalhes do Chamado</h1>
+      <span class="text-neutral-500 fw-bold h3 mb-0">#{{ "%04d"|format(chamado.id) }}</span>
+    </div>
+    <p class="mb-0 text-muted small mt-1" style="margin-left: 56px;">Acompanhamento e histórico de manutenção.</p>
+  </div>
+{% endblock %}
 
 {% block content %}
 <div class="container-fluid p-0">
-
-  <nav aria-label="breadcrumb" class="mb-3">
-    <ol class="breadcrumb mb-0" style="font-size: 0.85rem; font-weight: 500;">
-      <li class="breadcrumb-item"><a href="{{ url_for('dashboard.index') }}" class="text-decoration-none text-muted"><i class="bi bi-house-door me-1"></i>Painel</a></li>
-      <li class="breadcrumb-item"><a href="{{ url_for('manutencao.lista') }}" class="text-decoration-none text-muted">Manutenção</a></li>
-      <li class="breadcrumb-item active text-dark" aria-current="page">Chamado #{{ chamado.id }}</li>
-    </ol>
-  </nav>
-
-  <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-3">
-    <h1 class="h3 mb-0" style="font-weight: 800; color: var(--sgd-navy);">
-      <i class="bi bi-tools me-2" style="color: var(--sgd-blue);"></i>Detalhes do Chamado #{{ chamado.id }}
-    </h1>
-    
-    <div class="d-flex gap-2">
-      {% if chamado.status not in ['concluido', 'cancelado'] %}
-        {% if current_user.is_usuario and chamado.status == 'aberto' or current_user.pode_gerenciar %}
-          <a href="{{ url_for('manutencao.editar', cid=chamado.id) }}" class="btn btn-light border d-flex align-items-center gap-2" style="font-weight: 600; font-size: 0.85rem; color: #4b5563;">
-            <i class="bi bi-pencil"></i> Editar
-          </a>
-        {% endif %}
-        
-        {% if current_user.pode_gerenciar %}
-          <a href="{{ url_for('manutencao.alterar_status', cid=chamado.id, novo_status='concluido') }}" class="btn btn-success d-flex align-items-center gap-2 shadow-sm" style="font-weight: 600; font-size: 0.85rem;">
-            <i class="bi bi-check2-circle"></i> Resolver Chamado
-          </a>
-        {% endif %}
-      {% endif %}
-    </div>
-  </div>
-
-  <div class="row g-4">
+  <div class="row g-4 mb-4 align-items-stretch">
     
     <div class="col-12 col-xl-4 col-lg-5">
-      <div class="card-corp h-100">
-        
-        <div class="card-header-corp d-flex align-items-center gap-2">
-          <i class="bi bi-info-circle text-muted"></i>
-          <h6 class="mb-0">Informações da Ocorrência</h6>
+      <div class="card-estruturado h-100 d-flex flex-column">
+        <div class="card-estruturado__header">
+          <h5 class="card-estruturado__title"><i class="bi bi-info-circle me-2 text-muted"></i>Dados do Chamado</h5>
         </div>
         
-        <div class="p-4">
-          <div class="d-flex align-items-center border-bottom pb-3 mb-3">
-            <span class="text-muted fw-medium" style="width: 130px; font-size: 0.85rem; flex-shrink: 0;">Status</span>
-            <span class="status-pill status-{{ chamado.status }} ms-auto">{{ chamado.status | replace('_', ' ') }}</span>
-          </div>
-
-          <div class="d-flex align-items-center border-bottom pb-3 mb-3">
-            <span class="text-muted fw-medium" style="width: 130px; font-size: 0.85rem; flex-shrink: 0;">Urgência</span>
-            <div class="ms-auto">
-              {% if chamado.urgencia == 'alta' %}
-                <span style="background: #fee2e2; color: #dc2626; padding: 4px 10px; border-radius: 50px; font-size: 0.7rem; font-weight: 700; text-transform: uppercase;">Alta</span>
-              {% elif chamado.urgencia == 'media' %}
-                <span style="background: #fef3c7; color: #d97706; padding: 4px 10px; border-radius: 50px; font-size: 0.7rem; font-weight: 700; text-transform: uppercase;">Média</span>
-              {% else %}
-                <span style="background: #dcfce7; color: #16a34a; padding: 4px 10px; border-radius: 50px; font-size: 0.7rem; font-weight: 700; text-transform: uppercase;">Baixa</span>
-              {% endif %}
+        <div class="card-estruturado__body d-flex flex-column flex-grow-1">
+          <div class="d-flex justify-content-between align-items-center mb-4">
+            <div class="d-flex flex-column gap-1">
+              <span class="text-neutral-500 fw-medium" style="font-size: 0.875rem;">Status atual</span>
+              <div>{{ render_status_pill(chamado.status.value) }}</div>
+            </div>
+            <div class="text-end d-flex flex-column gap-1 align-items-end">
+              <span class="text-neutral-500 fw-medium" style="font-size: 0.875rem;">Urgência</span>
+              <div>{{ render_status_pill(chamado.urgencia.value) }}</div>
             </div>
           </div>
 
-          <div class="d-flex align-items-center border-bottom pb-3 mb-3">
-            <span class="text-muted fw-medium" style="width: 130px; font-size: 0.85rem; flex-shrink: 0;">Local / Setor</span>
-            <span class="fw-bold text-dark text-truncate" title="{{ chamado.local }}" data-bs-toggle="tooltip" style="flex: 1; min-width: 0;">{{ chamado.local }}</span>
+          <div class="mb-4 d-flex flex-column gap-1">
+            <span class="text-neutral-500 fw-medium" style="font-size: 0.875rem;">Local da manutenção</span>
+            <span class="text-neutral-900 fw-semibold">{{ chamado.local }}</span>
+          </div>
+          
+          <div class="mb-4 d-flex flex-column gap-1">
+            <span class="text-neutral-500 fw-medium" style="font-size: 0.875rem;">Solicitante</span>
+            <span class="text-neutral-900 fw-semibold">{{ chamado.solicitante.nome | smart_title }}</span>
           </div>
 
-          <div class="d-flex align-items-center border-bottom pb-3 mb-3">
-            <span class="text-muted fw-medium" style="width: 130px; font-size: 0.85rem; flex-shrink: 0;">Solicitante</span>
-            <span class="fw-bold text-truncate" style="color: #4b5563; flex: 1; min-width: 0;" title="{{ chamado.solicitante.nome }}">{{ chamado.solicitante.nome | smart_title }}</span>
-          </div>
-
-          <div class="d-flex align-items-center pb-3 mb-3">
-            <span class="text-muted fw-medium" style="width: 130px; font-size: 0.85rem; flex-shrink: 0;">Abertura</span>
-            <span class="fw-bold" style="color: #4b5563;">{{ chamado.data_criacao.strftime('%d/%m/%Y às %H:%M') }}</span>
-          </div>
-
-          <div class="mt-2 p-3 bg-light rounded" style="border: 1px solid #e5e7eb;">
-            <span class="d-block text-muted fw-bold mb-1" style="font-size: 0.75rem; text-transform: uppercase;">Descrição do Problema:</span>
-            <span class="text-break" style="font-size: 0.85rem; color: #4b5563; line-height: 1.5;">{{ chamado.descricao }}</span>
+          <div class="mb-4 d-flex flex-column gap-1">
+            <span class="text-neutral-500 fw-medium" style="font-size: 0.875rem;">Descrição inicial</span>
+            <div class="text-neutral-900 fw-semibold px-0" style="white-space: pre-wrap; max-height: 180px; overflow-y: auto;">{{ chamado.descricao }}</div>
           </div>
 
           {% if anexos %}
-          <div class="mt-4 pt-3 border-top">
-            <span class="d-block text-muted fw-bold mb-3" style="font-size: 0.75rem; text-transform: uppercase;">Fotos Iniciais ({{ anexos|length }}):</span>
+          <div class="mb-4 d-flex flex-column gap-2">
+            <span class="text-neutral-500 fw-medium" style="font-size: 0.875rem;">Fotos do local</span>
             <div class="d-flex flex-wrap gap-2">
-              {% for anexo in anexos %}
-                <a href="{{ url_for('manutencao.serve_upload', filename=anexo.caminho_arquivo) }}" target="_blank" class="border rounded p-1" title="Ver imagem original" style="transition: transform 0.2s; display: block; overflow: hidden; background: #f9fafb;">
-                  <img src="{{ url_for('manutencao.serve_upload', filename=anexo.caminho_arquivo) }}" alt="Anexo" style="width: 70px; height: 70px; object-fit: cover; border-radius: 4px;">
-                </a>
+              {% for a in anexos %}
+                 <div class="thumbnail-wrapper shadow-sm cursor-pointer" data-bs-toggle="modal" data-bs-target="#modalLightbox" data-img-src="/uploads/{{ a.caminho_arquivo.split('/')[-1] }}">
+                    <img src="/uploads/{{ a.caminho_arquivo.split('/')[-1] }}" class="anexo-thumbnail">
+                    <div class="thumbnail-overlay">
+                       <i class="bi bi-zoom-in text-white fs-3"></i>
+                    </div>
+                 </div>
               {% endfor %}
             </div>
           </div>
           {% endif %}
+
+          <div class="mt-auto">
+            {% if current_user.pode_gerenciar and chamado.status.value not in ['concluido', 'cancelado'] %}
+            <div class="mb-4 p-3 rounded-3 border bg-neutral-50">
+              <label class="text-neutral-500 fw-medium d-block mb-2" style="font-size: 0.875rem;">Mudar status</label>
+              <form id="formAtualizarStatus" data-cid="{{ chamado.id }}" class="d-flex flex-column gap-2">
+                  <input type="hidden" id="novo_status" value="{{ chamado.status.value }}">
+                  <div class="dropdown">
+                    <button class="btn btn-white border w-100 d-flex justify-content-between align-items-center shadow-none rounded-3 fw-bold" type="button" data-bs-toggle="dropdown">
+                      <span id="statusVisor">
+                        {% if chamado.status.value == 'aberto' %}<span style="color: #BE185D; font-size: 0.6rem; vertical-align: middle; margin-right: 4px;">●</span> Aberto{% endif %}
+                        {% if chamado.status.value == 'em_andamento' %}<span style="color: #A16207; font-size: 0.6rem; vertical-align: middle; margin-right: 4px;">●</span> Em Andamento{% endif %}
+                      </span>
+                    </button>
+                    <ul class="dropdown-menu w-100 shadow-sm">
+                      <li>
+                        <a class="dropdown-item opt-status d-flex align-items-center gap-2 fw-medium" href="#" data-val="em_andamento" data-html="<span style='color: #A16207; font-size: 0.6rem; vertical-align: middle; margin-right: 4px;'>●</span> Em Andamento">
+                          <span style="color: #A16207; font-size: 0.6rem;">●</span> Em Andamento
+                        </a>
+                      </li>
+                      <li>
+                        <a class="dropdown-item opt-status d-flex align-items-center gap-2 fw-medium" href="#" data-val="concluido" data-html="<span style='color: #166534; font-size: 0.6rem; vertical-align: middle; margin-right: 4px;'>●</span> Concluído">
+                          <span style="color: #166534; font-size: 0.6rem;">●</span> Concluído
+                        </a>
+                      </li>
+                    </ul>
+                  </div>
+                  {{ render_button('Atualizar Chamado', type='submit', id='btnSalvarAvanco', class='btn-acao-solida btn-sm w-100 mt-2') }}
+              </form>
+            </div>
+            {% endif %}
+
+            <div class="d-flex flex-column mt-4 pt-2">
+               {% if chamado.status.value not in ['concluido', 'cancelado'] %}
+                  <button type="button" class="btn btn-outline-neutral w-100 fw-semibold d-flex align-items-center justify-content-center gap-2" data-bs-toggle="modal" data-bs-target="#modalCancelar">
+                    <i class="bi bi-x-octagon"></i> Cancelar Chamado
+                  </button>
+               {% endif %}
+            </div>
+          </div>
         </div>
       </div>
     </div>
 
     <div class="col-12 col-xl-8 col-lg-7">
-      <div class="card-corp h-100 d-flex flex-column" style="position: relative;">
-        
-        <div class="card-header-corp d-flex align-items-center gap-2">
-          <i class="bi bi-chat-left-text text-muted"></i>
-          <h6 class="mb-0">Acompanhamento e Histórico</h6>
+      <div class="card-estruturado h-100 min-vh-50 d-flex flex-column">
+        <div class="card-estruturado__header border-0">
+          <h5 class="card-estruturado__title"><i class="bi bi-chat-dots me-2 text-muted"></i>Histórico e Conversa</h5>
         </div>
 
-        <div class="p-4 flex-grow-1" style="background-color: #f9fafb; overflow-y: auto; max-height: 60vh; border-bottom: 1px solid #e5e7eb;">
-          {% if timeline %}
-            <div class="d-flex flex-column gap-3">
-              {% for item in timeline %}
+        <div class="card-estruturado__body flex-grow-1 overflow-auto p-4 bg-neutral-50" id="chatScrollArea">
+          <div class="d-flex flex-column gap-4 pb-3">
+
+            {% for item in timeline|list|reverse %}
+              {% set is_me = (current_user.nome == item.ator_nome) %}
+
+              <div class="d-flex gap-3">
                 
-                {% if item.acao is defined %}
-                  <div class="d-flex justify-content-center my-2">
-                    <span class="badge bg-white text-secondary border shadow-sm px-3 py-2 d-flex align-items-center gap-2" style="font-size: 0.75rem; font-weight: 500; border-radius: 20px;">
-                      <i class="bi bi-robot text-muted"></i>
-                      <span>
-                        <strong>{{ item.ator.nome.split()[0] if item.ator else 'Sistema' }}</strong> 
-                        {{ item.acao|lower }} o chamado.
-                      </span>
-                      <span class="text-muted fw-normal ms-1">{{ item.data_hora.strftime('%d/%m %H:%M') }}</span>
-                    </span>
-                  </div>
+                <div class="d-flex flex-column align-items-center flex-shrink-0" style="width: 32px;">
+                  {% if item.tipo != 'auditoria' %}
+                    {{ render_avatar(item.ator_nome, item.ator_perfil or 'usuario', 'sm', 'shadow-sm flex-shrink-0') }}
+                  {% else %}
+                    <div class="rounded-circle mt-1 shadow-sm flex-shrink-0" style="width: 12px; height: 12px; background-color: var(--color-white); border: 2px solid var(--color-neutral-300);"></div>
+                  {% endif %}
 
-                {% elif item.texto is defined %}
-                  {% set is_me = (item.id_usuario == current_user.id) %}
-                  <div class="p-3 rounded shadow-sm border" style="border-color: {% if is_me %}#bbf7d0{% else %}#e5e7eb{% endif %}; background-color: {% if is_me %}#f0fdf4{% else %}#ffffff{% endif %};">
-                    <div class="d-flex justify-content-between align-items-center mb-2">
-                      <strong style="color: var(--sgd-navy); font-size: 0.9rem;">
-                        <i class="bi bi-person-circle text-muted me-1"></i> 
-                        {% if is_me %}Você{% else %}{{ item.autor.nome.split()[0] | smart_title }}{% endif %}
-                        
-                        {% if item.autor.perfil == 'administrador' %}
-                          <span class="badge ms-1" style="background-color: var(--sgd-navy); color: #fff; font-size: 0.65rem;">Admin</span>
-                        {% elif item.autor.perfil == 'gestor' %}
-                          <span class="badge ms-1" style="background-color: #fef3c7; color: #d97706; font-size: 0.65rem;">Gestor</span>
-                        {% endif %}
-                      </strong>
-                      <span class="text-muted" style="font-size: 0.75rem;">{{ item.data_hora.strftime('%d/%m/%Y %H:%M') }}</span>
+                  {% if not loop.last %}
+                    <div class="bg-neutral-200 flex-grow-1 my-1" style="width: 2px; min-height: 24px;"></div>
+                  {% endif %}
+                </div>
+
+                <div class="d-flex flex-column w-100">
+                  {% if item.tipo != 'auditoria' %}
+                    <div class="d-flex align-items-center gap-2 mb-2">
+                      <span class="text-neutral-900 fw-semibold small">
+                          {% if is_me %}Eu{% else %}{{ item.ator_nome | title }}{% endif %}
+                      </span>
+                      <span class="text-neutral-400 small" style="font-size: 0.75rem;">{{ item.data.strftime('%d/%m %H:%M') }}</span>
                     </div>
                     
-                    <div class="text-break" style="font-size: 0.85rem; color: #4b5563; line-height: 1.5;">
-                      {{ item.texto }}
+                    <div class="bg-white border rounded-3 balao-mensagem shadow-sm d-inline-flex flex-column" style="border-top-left-radius: 0 !important; max-width: 90%;">
+                      <p class="mb-0 text-dark fw-medium small" style="white-space: pre-wrap; line-height: 1.5;">{{ item.info }}</p>
+                      {% if item.extra %}
+                        <div class="mt-3">
+                           <div class="thumbnail-wrapper d-inline-block shadow-sm cursor-pointer" data-bs-toggle="modal" data-bs-target="#modalLightbox" data-img-src="/uploads/{{ item.extra.split('/')[-1] }}">
+                              <img src="/uploads/{{ item.extra.split('/')[-1] }}" class="anexo-thumbnail">
+                              <div class="thumbnail-overlay">
+                                 <i class="bi bi-zoom-in text-white fs-4"></i>
+                              </div>
+                           </div>
+                        </div>
+                      {% endif %}
                     </div>
-                    
-                    {% if item.caminho_anexo %}
-                    <div class="mt-2 pt-2 border-top" style="border-color: rgba(0,0,0,0.05) !important;">
-                      <a href="{{ url_for('manutencao.serve_upload', filename=item.caminho_anexo) }}" target="_blank" class="d-inline-flex align-items-center gap-1 text-decoration-none" style="font-size: 0.75rem; color: var(--sgd-blue);">
-                        <i class="bi bi-image"></i> Ver anexo enviado
-                      </a>
+                  {% else %}
+                    <div class="d-flex align-items-center">
+                       <div class="d-inline-block">
+                         <strong class="text-neutral-600 small">{{ item.ator_nome | title }}</strong> 
+                         <span class="log-auditoria text-secondary small" data-info="{{ item.info | e }}" data-extra="{{ item.extra | e }}">{{ item.info }}</span>
+                         <span class="text-neutral-400 ms-2 small" style="font-size: 0.75rem;">{{ item.data.strftime('%d/%m %H:%M') }}</span>
+                       </div>
                     </div>
-                    {% endif %}
-                  </div>
-                {% endif %}
-              {% endfor %}
-            </div>
-          {% else %}
-            <div class="text-center text-muted py-5">
-              <i class="bi bi-chat-square-dots fs-1 d-block mb-3" style="opacity: 0.3;"></i>
-              Nenhum registro no histórico.
-            </div>
-          {% endif %}
+                  {% endif %}
+                </div>
+
+              </div>
+            {% endfor %}
+          </div>
         </div>
 
-        <div class="p-4 bg-white position-sticky bottom-0" style="border-radius: 0 0 12px 12px; z-index: 10;">
+        <div class="p-4 bg-white border-top rounded-bottom-3 flex-shrink-0 mt-auto" style="border-color: var(--color-neutral-200) !important;">
           <form method="POST" action="{{ url_for('manutencao.comentar', cid=chamado.id) }}" enctype="multipart/form-data">
-           <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
-            <textarea class="form-control input-corp shadow-none mb-2 text-break" name="texto" rows="3" placeholder="Adicione instruções, fotos ou atualizações..." required></textarea>
-            
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+            <textarea class="form-control shadow-none mb-2 rounded-3" name="texto" rows="2" placeholder="Escreva uma mensagem ou atualização..." required style="resize: none;"></textarea>
             <div class="d-flex justify-content-between align-items-center">
-              
-              <label for="anexo_comentario" class="btn btn-light btn-sm text-muted border mb-0 d-flex align-items-center gap-2" style="cursor: pointer; transition: all 0.2s;">
-                <i class="bi bi-paperclip fs-6"></i> 
-                <span id="nome_arquivo_selecionado" style="font-size: 0.75rem;">Anexar Foto</span>
-                <input type="file" id="anexo_comentario" name="anexo" class="d-none" accept="image/*">
+              <label for="anexo_comentario" class="btn btn-ghost mb-0 cursor-pointer fw-medium d-flex align-items-center gap-2">
+                <i class="bi bi-paperclip fs-5"></i> <span id="labelAnexo">Anexar Foto</span>
+                <input type="file" id="anexo_comentario" name="anexo" class="d-none" accept=".jpg,.jpeg,.png,.webp,.gif,.pdf">
               </label>
-
-              <button type="submit" class="btn-corp-primary d-flex align-items-center gap-2" style="font-size: 0.85rem; padding: 8px 16px; border: none; box-shadow: none;">
-                <i class="bi bi-send"></i> Enviar
-              </button>
+              {{ render_button('Enviar Mensagem', type='submit', class='btn-acao-solida px-4') }}
             </div>
           </form>
         </div>
-
       </div>
     </div>
-
   </div>
 </div>
 
+<div class="modal fade" id="modalLightbox" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered modal-xl">
+    <div class="modal-content bg-transparent border-0 text-center position-relative">
+      <button type="button" class="btn-close position-absolute end-0 top-0 p-3 shadow-none" data-bs-dismiss="modal" style="filter: invert(1) grayscale(100%) brightness(200%); z-index: 1050;"></button>
+      <img id="lightboxImage" src="" class="img-fluid rounded-3 shadow-lg mx-auto" style="max-height: 90vh; object-fit: contain;">
+    </div>
+  </div>
+</div>
+
+<div class="modal fade" id="modalCancelar" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content rounded-3 border-0 shadow-lg">
+      <div class="modal-header border-0 pb-0">
+        <h5 class="modal-title fw-bold text-danger">Cancelar Chamado</h5>
+        <button type="button" class="btn-close shadow-none" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body py-3">
+        <p class="text-secondary">Deseja realmente interromper este chamado? O registro será mantido para auditoria.</p>
+      </div>
+      <div class="modal-footer border-0 pt-0 d-flex justify-content-between">
+        <button type="button" class="btn btn-light fw-medium rounded-3" data-bs-dismiss="modal">Voltar</button>
+        <button type="button" class="btn btn-danger px-4 fw-bold rounded-3" id="confirmCancel" data-cid="{{ chamado.id }}">Sim, Cancelar</button>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
 <script>
-  // Inicializar Tooltips do Bootstrap
-  document.addEventListener('DOMContentLoaded', function () {
-    var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
-    var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
-      return new bootstrap.Tooltip(tooltipTriggerEl)
+document.addEventListener("turbo:load", () => {
+    const lightboxModal = document.getElementById('modalLightbox');
+    if (lightboxModal) {
+        lightboxModal.addEventListener('show.bs.modal', function (event) {
+            const trigger = event.relatedTarget;
+            const imgSrc = trigger.getAttribute('data-img-src');
+            document.getElementById('lightboxImage').src = imgSrc;
+        });
+    }
+
+    const chatArea = document.getElementById('chatScrollArea');
+    if(chatArea) chatArea.scrollTop = chatArea.scrollHeight;
+
+    const inputFile = document.getElementById('anexo_comentario');
+    if (inputFile) {
+        inputFile.addEventListener('change', function() {
+            document.getElementById('labelAnexo').innerText = this.files[0] ? this.files[0].name : 'Anexar Foto';
+        });
+    }
+
+    document.querySelectorAll('.opt-status').forEach(opt => {
+        opt.addEventListener('click', e => {
+            e.preventDefault();
+            document.getElementById('novo_status').value = opt.dataset.val;
+            document.getElementById('statusVisor').innerHTML = opt.dataset.html;
+        });
     });
 
-    // Feedback visual do anexo no comentário
-    document.getElementById('anexo_comentario').addEventListener('change', function() {
-      var nomeArquivo = this.files.length > 0 ? this.files[0].name : 'Anexar Foto';
-      document.getElementById('nome_arquivo_selecionado').textContent = nomeArquivo;
+    document.querySelectorAll('.log-auditoria').forEach(el => {
+        let info = el.getAttribute('data-info');
+        let extra = el.getAttribute('data-extra');
+        
+        function formatar(s) {
+            if(!s) return '';
+            const str = String(s).toLowerCase();
+            const m = {'aberto':'Aberto', 'em_andamento':'Em Andamento', 'concluido':'Concluído', 'cancelado':'Cancelado'};
+            return m[str] || str.charAt(0).toUpperCase() + str.slice(1).replace('_', ' ');
+        }
+
+        let novoStatus = null;
+
+        if(extra && extra !== 'None' && extra !== '{}' && extra !== '') {
+            try {
+                let fixed = extra.replace(/'/g, '"').replace(/True/g, 'true').replace(/False/g, 'false').replace(/None/g, 'null');
+                let obj = JSON.parse(fixed);
+                
+                novoStatus = obj.para || obj.novo_status || obj.status || obj.depois;
+                if (!novoStatus) {
+                    const conhecidos = ['aberto', 'em_andamento', 'concluido', 'cancelado'];
+                    novoStatus = Object.values(obj).find(v => typeof v === 'string' && conhecidos.includes(v.toLowerCase()));
+                }
+            } catch(e) { }
+        }
+
+        if (novoStatus) {
+            el.innerHTML = `atualizou o progresso do chamado para: <strong class="text-dark">${formatar(novoStatus)}</strong>`;
+        } else if (['aberto', 'em_andamento', 'concluido', 'cancelado'].includes(info.toLowerCase())) {
+            el.innerHTML = `atualizou o progresso do chamado para: <strong class="text-dark">${formatar(info)}</strong>`;
+        } else if (info.toUpperCase() === 'STATUS') {
+            el.innerHTML = `atualizou o progresso do chamado`;
+        } else {
+            el.innerHTML = `registrou uma ação: ${info}`;
+        }
     });
-  });
+
+    const formStatus = document.getElementById('formAtualizarStatus');
+    if (formStatus) {
+        formStatus.addEventListener('submit', async function(e) {
+            e.preventDefault();
+            const btn = document.getElementById('btnSalvarAvanco');
+            btn.disabled = true; btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Salvando...';
+            try {
+                const res = await fetch(`/api/manutencao/${this.dataset.cid}/status`, {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json', 'X-CSRFToken': document.querySelector('meta[name="csrf-token"]').content },
+                    body: JSON.stringify({ novo_status: document.getElementById('novo_status').value })
+                });
+                if(res.ok) window.location.reload();
+            } catch(e) { alert("Erro ao atualizar."); btn.disabled = false; btn.innerHTML = 'Atualizar Chamado'; }
+        });
+    }
+
+    const btnCancel = document.getElementById('confirmCancel');
+    if (btnCancel) {
+        btnCancel.addEventListener('click', function() {
+            this.disabled = true; this.innerHTML = '<span class="spinner-border spinner-border-sm"></span>';
+            fetch(`/api/manutencao/${this.dataset.cid}/status`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json', 'X-CSRFToken': document.querySelector('meta[name="csrf-token"]').content },
+                body: JSON.stringify({ novo_status: 'cancelado' })
+            }).then(res => { if(res.ok) window.location.reload(); });
+        });
+    }
+});
 </script>
 {% endblock %}

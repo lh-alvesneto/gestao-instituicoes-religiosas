@@ -1,128 +1,399 @@
 {% extends "base.html" %}
+{% from "components.html" import render_button %}
 
 {% block title %}Histórico — IPVP{% endblock %}
 
+{% block header_content %}
+  {% if current_user.pode_gerenciar %}
+    <h1 class="h3 mb-1 page-title fw-bold text-primary-800">Histórico Operacional</h1>
+    <p class="mb-0 text-muted small mt-1">Consulte o arquivo de solicitações e manutenções concluídas ou canceladas da instituição.</p>
+  {% else %}
+    <h1 class="h3 mb-1 page-title fw-bold text-primary-800">Meu Histórico</h1>
+    <p class="mb-0 text-muted small mt-1">Consulte o arquivo de suas solicitações e manutenções concluídas ou canceladas.</p>
+  {% endif %}
+{% endblock %}
+
 {% block content %}
 <div class="container-fluid p-0">
+  <div class="card-listagem mb-4">
+       
+    <div class="d-flex flex-column flex-lg-row justify-content-between align-items-center mb-4 gap-3">
+      <div class="custom-tabs-container" id="historicoTabs">
+        <button class="custom-tab active" data-aba="tudo">Tudo</button>
+        <button class="custom-tab" data-aba="materiais">Materiais</button>
+        <button class="custom-tab" data-aba="manutencoes">Manutenção</button>
+      </div>
 
-  <div class="d-flex justify-content-between align-items-end mb-4 border-bottom pb-3">
-    <div>
-      <h1 class="h3 mb-1" style="font-weight: 800; color: var(--sgd-navy);">
-        <i class="bi bi-clock-history me-2" style="color: var(--sgd-blue);"></i>Histórico de Solicitações
-      </h1>
-      <p class="text-muted mb-0" style="font-size: 0.9rem;">Registros arquivados com status final (Concluído, Entregue ou Cancelado).</p>
+      <button type="button" id="btnExportarCSV" class="btn-acao-solida shadow-sm">
+        <i class="bi bi-file-earmark-excel me-1"></i> Exportar CSV
+      </button>
     </div>
-  </div>
 
-  <div class="card-corp mb-5">
-    <div class="card-header-corp">
-      <h6><i class="bi bi-box-seam me-2" style="color:#ca8a04;"></i>Materiais — Finalizados</h6>
-      <span class="badge bg-light text-secondary border" style="font-size: 0.75rem; font-weight: 600; padding: 6px 12px; border-radius: 8px;">
-        Total: {{ mat_historico|length }} registro(s)
-      </span>
+    <div class="d-flex justify-content-between align-items-start flex-wrap gap-3 mb-4 w-100">
+      
+      <form id="searchFormHistorico" style="flex: 1;">
+        <div class="d-flex flex-wrap align-items-center gap-2">
+          
+          <div class="input-group" style="width: 280px;">
+            <span class="input-group-text bg-white border-end-0 border-neutral-300 text-neutral-500 rounded-start">
+              <i class="bi bi-search"></i>
+            </span>
+            <input type="text" id="searchInput" class="form-control border-start-0 shadow-none search-input rounded-end"
+                   placeholder="Rastreio, detalhes..." autocomplete="off">
+          </div>
+
+          <input type="hidden" id="statusFilter" value="">
+          <div class="dropdown">
+            <button class="form-select shadow-none search-input text-secondary fw-medium d-flex justify-content-between align-items-center bg-white" type="button" data-bs-toggle="dropdown" aria-expanded="false" style="min-width: 190px;">
+              <span id="statusFilterVisor" class="text-truncate">Status (Todos)</span>
+            </button>
+            <ul class="dropdown-menu shadow-sm mt-1 p-2 border-0" style="border-radius: var(--radius-md); box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -2px rgba(0,0,0,0.05) !important;">
+              <li><a class="dropdown-item rounded-2 py-2 mb-1 opt-status-filter fw-medium text-secondary" href="#" data-val="">Status (Todos)</a></li>
+              <li><a class="dropdown-item rounded-2 py-2 mb-1 opt-status-filter fw-medium text-secondary" href="#" data-val="concluido">Concluídos / Entregues</a></li>
+              <li><a class="dropdown-item rounded-2 py-2 opt-status-filter fw-medium text-secondary" href="#" data-val="cancelado">Cancelados</a></li>
+            </ul>
+          </div>
+
+          <div class="d-flex align-items-center gap-1">
+            <input type="date" id="dataInicio" class="form-control shadow-none search-input text-secondary fw-medium" style="width: 140px;" title="Data Inicial">
+            <span class="text-muted small px-1">até</span>
+            <input type="date" id="dataFim" class="form-control shadow-none search-input text-secondary fw-medium" style="width: 140px;" title="Data Final">
+          </div>
+
+          <button type="button" id="btnLimparFiltros" class="btn btn-link text-muted text-decoration-none fw-bold px-2 small">Limpar</button>
+        </div>
+      </form>
+
+      <div class="d-flex align-items-center gap-2 flex-shrink-0 text-muted small pt-1">
+        <label for="perPageSelect" class="mb-0 fw-medium text-nowrap">Exibir:</label>
+        
+        <input type="hidden" id="perPageSelect" value="10">
+        <div class="dropdown">
+          <button class="form-select shadow-none search-input text-secondary fw-medium d-flex justify-content-between align-items-center bg-white" type="button" data-bs-toggle="dropdown" aria-expanded="false" style="min-width: 110px;">
+            <span id="perPageVisor">10 linhas</span>
+          </button>
+          <ul class="dropdown-menu shadow-sm mt-1 p-2 border-0 dropdown-menu-end" style="border-radius: var(--radius-md); box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -2px rgba(0,0,0,0.05) !important;">
+            <li><a class="dropdown-item rounded-2 py-2 mb-1 opt-perpage-filter fw-medium text-secondary" href="#" data-val="10">10 linhas</a></li>
+            <li><a class="dropdown-item rounded-2 py-2 mb-1 opt-perpage-filter fw-medium text-secondary" href="#" data-val="25">25 linhas</a></li>
+            <li><a class="dropdown-item rounded-2 py-2 opt-perpage-filter fw-medium text-secondary" href="#" data-val="50">50 linhas</a></li>
+          </ul>
+        </div>
+      </div>
+
     </div>
-    <div class="table-responsive" style="overflow-x: auto;">
-      <table class="table-corp">
-        <thead>
-          <tr>
-            <th style="width: 60px; text-align: center;">ID</th>
-            <th style="width: 30%;">Material</th>
-            <th style="width: 80px; text-align: center;">Qtd</th>
-            <th>Solicitante</th>
-            <th>Data da Solicitação</th>
-            <th style="width: 140px; text-align: center;">Status Final</th>
-          </tr>
+
+    <div class="table-responsive">
+      <table class="table-corp table-layout-fixed w-100 mb-0">
+        <thead id="thead-historico">
         </thead>
-        <tbody>
-          {% for s in mat_historico %}
-          <tr style="vertical-align: middle;">
-            <td style="text-align: center; color: #9ca3af; font-size: 0.8rem;">#{{ s.id }}</td>
-            <td>
-              <span class="d-block fw-bold" style="color: var(--sgd-navy);">{{ s.nome_material }}</span>
-              <span class="d-block mt-1" style="font-size: 0.75rem; color: #6b7280; line-height: 1.3; max-width: 250px;">
-                Justificativa: {{ s.justificativa | truncate(60) }}
-              </span>
-            </td>
-            <td style="text-align: center; font-weight: 700; color: #4b5563;">{{ s.quantidade }}</td>
-            <td style="font-size: 0.85rem;">{{ s.solicitante.nome }}</td>
-            <td style="font-size: 0.85rem; color: #6b7280;">{{ s.data_criacao.strftime('%d/%m/%Y %H:%M') }}</td>
-            <td style="text-align: center;">
-              <span class="status-pill status-{{ s.status }}">{{ s.status }}</span>
-            </td>
-          </tr>
-          {% else %}
-          <tr>
-            <td colspan="6">
-              <div class="empty-state">
-                <i class="bi bi-inbox"></i>
-                <p>Nenhum histórico de material arquivado.</p>
-              </div>
-            </td>
-          </tr>
-          {% endfor %}
+        <tbody id="tbody-historico">
+          <tr><td colspan="6" class="text-center py-5"><div class="spinner-border text-success" role="status"></div></td></tr>
         </tbody>
       </table>
     </div>
-  </div>
 
-  <div class="card-corp">
-    <div class="card-header-corp">
-      <h6><i class="bi bi-tools me-2" style="color:#dc2626;"></i>Manutenção — Finalizados</h6>
-      <span class="badge bg-light text-secondary border" style="font-size: 0.75rem; font-weight: 600; padding: 6px 12px; border-radius: 8px;">
-        Total: {{ man_historico|length }} registro(s)
-      </span>
-    </div>
-    <div class="table-responsive" style="overflow-x: auto;">
-      <table class="table-corp">
-        <thead>
-          <tr>
-            <th style="width: 60px; text-align: center;">ID</th>
-            <th style="width: 30%;">Local / Setor</th>
-            <th style="width: 110px; text-align: center;">Urgência</th>
-            <th>Solicitante</th>
-            <th>Data da Solicitação</th>
-            <th style="width: 140px; text-align: center;">Status Final</th>
-          </tr>
-        </thead>
-        <tbody>
-          {% for m in man_historico %}
-          <tr style="vertical-align: middle;">
-            <td style="text-align: center; color: #9ca3af; font-size: 0.8rem;">#{{ m.id }}</td>
-            <td>
-              <span class="d-block fw-bold" style="color: var(--sgd-navy);">{{ m.local }}</span>
-              <span class="d-block mt-1" style="font-size: 0.75rem; color: #6b7280; line-height: 1.3; max-width: 250px;">
-                {{ m.descricao | truncate(60) }}
-              </span>
-            </td>
-            <td style="text-align: center;">
-              {% if m.urgencia == 'alta' %}
-                <span style="background: #fee2e2; color: #dc2626; padding: 4px 10px; border-radius: 50px; font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;">Alta</span>
-              {% elif m.urgencia == 'media' %}
-                <span style="background: #fef3c7; color: #d97706; padding: 4px 10px; border-radius: 50px; font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;">Média</span>
-              {% else %}
-                <span style="background: #dcfce7; color: #16a34a; padding: 4px 10px; border-radius: 50px; font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;">Baixa</span>
-              {% endif %}
-            </td>
-            <td style="font-size: 0.85rem;">{{ m.solicitante.nome }}</td>
-            <td style="font-size: 0.85rem; color: #6b7280;">{{ m.data_criacao.strftime('%d/%m/%Y %H:%M') }}</td>
-            <td style="text-align: center;">
-              <span class="status-pill status-{{ m.status }}">{{ m.status | replace('_', ' ') }}</span>
-            </td>
-          </tr>
-          {% else %}
-          <tr>
-            <td colspan="6">
-              <div class="empty-state">
-                <i class="bi bi-tools"></i>
-                <p>Nenhum histórico de manutenção arquivado.</p>
-              </div>
-            </td>
-          </tr>
-          {% endfor %}
-        </tbody>
-      </table>
-    </div>
+    <div id="paginacao-historico"></div>
+    
   </div>
-
 </div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener("turbo:load", () => {
+    if (!document.getElementById('tbody-historico')) return;
+
+    const urlParams = new URLSearchParams(window.location.search);
+    let abaAtiva = urlParams.get('aba') || 'tudo';
+    let debounceTimerHistorico; 
+
+    const tabs = document.querySelectorAll('#historicoTabs .custom-tab');
+    const searchInput = document.getElementById('searchInput');
+    const statusFilter = document.getElementById('statusFilter');
+    const dataInicio = document.getElementById('dataInicio');
+    const dataFim = document.getElementById('dataFim');
+    const perPageSelect = document.getElementById('perPageSelect');
+    const formSearch = document.getElementById('searchFormHistorico');
+
+    tabs.forEach(b => {
+        b.classList.remove('active');
+        if (b.dataset.aba === abaAtiva) b.classList.add('active');
+    });
+
+    const acionarBusca = () => window.carregarDados(abaAtiva, 1);
+
+    tabs.forEach(tab => {
+        tab.addEventListener('click', function() {
+            abaAtiva = this.dataset.aba;
+            tabs.forEach(b => b.classList.remove('active'));
+            this.classList.add('active');
+            limparCamposFiltros();
+            acionarBusca();
+        });
+    });
+
+    if (formSearch) formSearch.addEventListener('submit', (e) => { e.preventDefault(); acionarBusca(); });
+    if (dataInicio) dataInicio.addEventListener('change', acionarBusca);
+    if (dataFim) dataFim.addEventListener('change', acionarBusca);
+    
+    document.querySelectorAll('.opt-status-filter').forEach(opt => {
+        opt.addEventListener('click', function(e) {
+            e.preventDefault();
+            document.getElementById('statusFilterVisor').innerText = this.innerText;
+            document.getElementById('statusFilter').value = this.dataset.val;
+            acionarBusca();
+        });
+    });
+
+    document.querySelectorAll('.opt-perpage-filter').forEach(opt => {
+        opt.addEventListener('click', function(e) {
+            e.preventDefault();
+            document.getElementById('perPageVisor').innerText = this.innerText;
+            document.getElementById('perPageSelect').value = this.dataset.val;
+            acionarBusca();
+        });
+    });
+
+    document.getElementById('btnLimparFiltros')?.addEventListener('click', () => {
+        limparCamposFiltros();
+        acionarBusca();
+    });
+
+    document.getElementById('btnExportarCSV')?.addEventListener('click', () => {
+        const urlParamsStr = `aba=${abaAtiva}&q=${encodeURIComponent(searchInput.value)}&status=${statusFilter.value}&inicio=${dataInicio.value}&fim=${dataFim.value}`;
+        window.open(`/api/historico/exportar?${urlParamsStr}`, '_blank');
+    });
+
+    if (searchInput) {
+        searchInput.addEventListener('input', function() {
+            clearTimeout(debounceTimerHistorico);
+            debounceTimerHistorico = setTimeout(() => acionarBusca(), 500);
+        });
+    }
+
+    function limparCamposFiltros() {
+        if(searchInput) searchInput.value = '';
+        if(dataInicio) dataInicio.value = '';
+        if(dataFim) dataFim.value = '';
+        if(statusFilter) {
+            statusFilter.value = '';
+            const visorStatus = document.getElementById('statusFilterVisor');
+            if(visorStatus) visorStatus.innerText = 'Status (Todos)';
+        }
+    }
+
+    function gerarStatusPill(statusTxt) {
+        const s = statusTxt.toLowerCase();
+        let classe = 'status-pendente';
+        if (s === 'entregue' || s === 'concluido' || s === 'concluído') classe = 'status-concluido';
+        if (s === 'cancelado') classe = 'status-cancelado';
+        let texto = s === 'entregue' ? 'ENTREGUE' : (s === 'cancelado' ? 'CANCELADO' : 'CONCLUÍDO');
+        return `<span class="status-pill ${classe}">${texto}</span>`;
+    }
+
+    function gerarSLAPill(slaTexto, statusTexto) {
+        if (slaTexto === 'N/A' || statusTexto.toLowerCase() === 'cancelado') {
+            return `<span class="badge bg-light text-secondary border shadow-sm fw-medium"><i class="bi bi-clock-history me-1"></i>N/A</span>`;
+        }
+        let cor = 'bg-success text-white'; let icone = 'bi-check-circle';
+        if (slaTexto.includes('dia(s)')) {
+            let dias = parseInt(slaTexto.split(' ')[0]);
+            if (dias >= 2 && dias <= 3) { cor = 'bg-warning text-dark'; icone = 'bi-exclamation-triangle'; } 
+            else if (dias > 3) { cor = 'bg-danger text-white'; icone = 'bi-exclamation-octagon'; }
+        }
+        return `<span class="badge ${cor} shadow-sm fw-bold"><i class="bi ${icone} me-1"></i>${slaTexto}</span>`;
+    }
+
+    function getIniciaisAvatar(nome) {
+        if (!nome) return "?";
+        const titulos = ['pr.', 'pra.', 'pastor', 'pastora', 'rev.', 'reverendo', 'dr.', 'dra.', 'prof.', 'profa.', 'irmão', 'irmã'];
+        const palavras = nome.split(' ').filter(p => !titulos.includes(p.toLowerCase()));
+        return palavras.length > 0 ? palavras[0][0].toUpperCase() : nome[0].toUpperCase();
+    }
+
+    window.carregarDados = async function(tipo, page) {
+        if (window.location.pathname.includes('/historico')) {
+            const novaUrl = new URL(window.location);
+            novaUrl.searchParams.set('aba', tipo);
+            window.history.replaceState({}, '', novaUrl);
+        }
+
+        const tBusca = searchInput ? searchInput.value : '';
+        const sFiltro = statusFilter ? statusFilter.value : '';
+        const dInicio = dataInicio ? dataInicio.value : '';
+        const dFim = dataFim ? dataFim.value : '';
+        const pPage = perPageSelect ? parseInt(perPageSelect.value) : 10;
+        
+        const thead = document.getElementById('thead-historico');
+        const tbody = document.getElementById('tbody-historico');
+        const pagContainer = document.getElementById('paginacao-historico');
+
+        let tituloReferencia = "MATERIAL / LOCAL";
+        let tituloDetalhe = "DETALHES";
+        
+        if (tipo === 'materiais') { tituloReferencia = "MATERIAL"; tituloDetalhe = "JUSTIFICATIVA"; } 
+        else if (tipo === 'manutencoes') { tituloReferencia = "LOCAL / SETOR"; tituloDetalhe = "DESCRIÇÃO DO PROBLEMA"; }
+
+        thead.innerHTML = `<tr>
+            <th class="text-center" style="width: 10%; min-width: 90px;">RASTREIO</th>
+            <th style="width: 15%; min-width: 130px;">DATA CONCLUSÃO</th>
+            <th style="width: 28%; min-width: 150px;">${tituloReferencia}</th>
+            <th class="col-hide-xl" style="width: 22%; min-width: 140px;">${tituloDetalhe}</th>
+            <th class="col-hide-lg text-center" style="width: 13%; min-width: 110px;">TEMPO (SLA)</th>
+            <th class="text-center" style="width: 12%; min-width: 130px;">STATUS</th>
+        </tr>`;
+        
+        tbody.innerHTML = `<tr><td colspan="6" class="text-center py-5"><div class="spinner-border text-success" role="status"></div></td></tr>`;
+        pagContainer.innerHTML = '';
+        pagContainer.className = '';
+
+        try {
+            let dadosParaExibir = [];
+            let totalItems = 0; let totalPages = 0; let hasPrev = false; let hasNext = false;
+
+            if (tipo === 'tudo') {
+                const apiMat = `/api/historico/materiais?page=1&per_page=100&q=${encodeURIComponent(tBusca)}&status=${sFiltro}&inicio=${dInicio}&fim=${dFim}`;
+                const apiMan = `/api/historico/manutencoes?page=1&per_page=100&q=${encodeURIComponent(tBusca)}&status=${sFiltro}&inicio=${dInicio}&fim=${dFim}`;
+                
+                const [resMat, resMan] = await Promise.all([fetch(apiMat), fetch(apiMan)]);
+                if (!resMat.ok || !resMan.ok) throw new Error('Erro na API');
+                
+                const dataMat = await resMat.json();
+                const dataMan = await resMan.json();
+                
+                (dataMat.items || []).forEach(i => i._tipoLinha = 'materiais');
+                (dataMan.items || []).forEach(i => i._tipoLinha = 'manutencoes');
+                
+                let combined = [...(dataMat.items || []), ...(dataMan.items || [])];
+                
+                combined.sort((a, b) => {
+                    const parseDate = (d) => {
+                        if (!d) return 0;
+                        let p = d.split(' ');
+                        let datePart = p[0];
+                        let timePart = p[1] || '00:00:00';
+                        if (datePart.includes('/')) {
+                            let parts = datePart.split('/');
+                            return new Date(`${parts[2]}-${parts[1]}-${parts[0]}T${timePart}`).getTime();
+                        }
+                        return new Date(`${datePart}T${timePart}`).getTime();
+                    };
+                    return parseDate(b.data) - parseDate(a.data);
+                });
+
+                totalItems = combined.length;
+                totalPages = Math.ceil(totalItems / pPage) || 1;
+                hasPrev = page > 1;
+                hasNext = page < totalPages;
+                
+                const inicioSlice = (page - 1) * pPage;
+                dadosParaExibir = combined.slice(inicioSlice, inicioSlice + pPage);
+
+            } else {
+                const apiUrl = `/api/historico/${tipo}?page=${page}&per_page=${pPage}&q=${encodeURIComponent(tBusca)}&status=${sFiltro}&inicio=${dInicio}&fim=${dFim}`;
+                
+                const response = await fetch(apiUrl);
+                if (!response.ok) throw new Error('Erro na API');
+                const data = await response.json();
+                
+                (data.items || []).forEach(i => i._tipoLinha = tipo);
+                dadosParaExibir = data.items || [];
+                totalItems = data.total || 0;
+                totalPages = data.pages || 1;
+                hasPrev = data.has_prev || false;
+                hasNext = data.has_next || false;
+            }
+            
+            tbody.innerHTML = '';
+            if (dadosParaExibir.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="6" class="text-center py-5"><i class="bi bi-inbox fs-1 text-neutral-300"></i><p class="mt-2 text-muted small">Nenhum registro encontrado com os filtros atuais.</p></td></tr>`;
+                return;
+            }
+            
+            dadosParaExibir.forEach(item => {
+                const tr = document.createElement('tr');
+                const isCancelado = item.status.toLowerCase() === 'cancelado';
+                tr.className = 'data-row row-clickable' + (isCancelado ? ' row-inativa' : '');
+                
+                const tipoLinha = item._tipoLinha;
+                const prefixo = tipoLinha === 'materiais' ? 'MAT-' : 'MAN-';
+                const idFormatado = prefixo + String(item.id).padStart(4, '0');
+                const dataFormatada = item.data ? item.data.split(' ')[0] : '';
+                const horaFormatada = item.data ? item.data.split(' ')[1] || '' : '';
+                
+                const referencia = tipoLinha === 'materiais' ? item.nome_material : item.local;
+                const detalhes = tipoLinha === 'materiais' ? item.justificativa : item.descricao;
+                const solicitanteNome = item.solicitante ? item.solicitante.split(' ')[0] : '---';
+                const urlClick = tipoLinha === 'materiais' ? `/materiais/${item.id}?origem=historico` : `/manutencao/${item.id}?origem=historico`;
+                
+                const perfilFormatado = (item.perfil_solicitante || 'usuario').toLowerCase();
+                
+                const avatarHtml = item.solicitante !== 'Desconhecido' && item.id_solicitante 
+                    ? `<a href="/usuarios/${item.id_solicitante}" class="d-inline-flex align-items-center text-decoration-none" onclick="event.stopPropagation();">
+                         <div class="avatar-circle avatar-xs avatar-circle--${perfilFormatado} me-1 shadow-sm flex-shrink-0" title="${item.solicitante}">${getIniciaisAvatar(item.solicitante)}</div>
+                       </a>`
+                    : `<i class="bi bi-person text-muted me-1"></i>`;
+
+                const nomeHtml = item.solicitante !== 'Desconhecido' && item.id_solicitante
+                    ? `<a href="/usuarios/${item.id_solicitante}" class="text-muted hover-underline" onclick="event.stopPropagation();">
+                         <span class="d-inline-block text-truncate align-middle" style="max-width: calc(100% - 25px);">${solicitanteNome}</span>
+                       </a>`
+                    : `<span class="d-inline-block text-truncate align-middle" style="max-width: calc(100% - 25px);">${solicitanteNome}</span>`;
+
+                tr.onclick = () => window.location.href = urlClick;
+
+                tr.innerHTML = `
+                  <td class="dados-opacos text-center"><span class="badge bg-light text-dark border shadow-sm font-monospace">${idFormatado}</span></td>
+                  <td class="dados-opacos"><span class="fw-medium text-nowrap text-neutral-600 small">${dataFormatada}</span><br><span class="text-muted text-nowrap" style="font-size: 0.8rem;">${horaFormatada}</span></td>
+                  <td class="dados-opacos">
+                    <span class="item-link d-block text-truncate" title="${referencia}">${referencia}</span>
+                    <span class="item-meta d-flex align-items-center mt-1">Solicitante: <span class="d-inline-flex align-items-center ms-1">${avatarHtml} ${nomeHtml}</span></span>
+                  </td>
+                  <td class="dados-opacos col-hide-xl">
+                    <span class="d-block text-truncate text-muted small" title="${detalhes}">${detalhes}</span>
+                  </td>
+                  <td class="dados-opacos text-center text-nowrap col-hide-lg">${gerarSLAPill(item.sla, item.status)}</td>
+                  <td class="text-center">${gerarStatusPill(item.status)}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+
+            if (totalPages > 1) {
+                pagContainer.className = "d-flex flex-wrap justify-content-center justify-content-md-between align-items-center mt-4 pt-4 border-top gap-3 pagination-wrapper";
+                
+                let btnPrev = `<li class="page-item ${!hasPrev ? 'disabled' : ''}">
+                    <button class="page-link text-secondary shadow-none border-0 bg-transparent d-flex align-items-center" onclick="window.carregarDados('${tipo}', ${page - 1})">
+                       <i class="bi bi-chevron-left"></i> <span class="d-none d-md-inline ms-1">Anterior</span>
+                    </button>
+                </li>`;
+                
+                let btnNext = `<li class="page-item ${!hasNext ? 'disabled' : ''}">
+                    <button class="page-link text-secondary shadow-none border-0 bg-transparent d-flex align-items-center" onclick="window.carregarDados('${tipo}', ${page + 1})">
+                       <span class="d-none d-md-inline me-1">Próxima</span> <i class="bi bi-chevron-right"></i>
+                    </button>
+                </li>`;
+                
+                pagContainer.innerHTML = `
+                  <div class="pagination-info d-none d-md-block small text-muted">Exibindo <strong class="text-dark">${dadosParaExibir.length}</strong> de <strong class="text-dark">${totalItems}</strong> registros</div>
+                  <nav>
+                    <ul class="pagination pagination-sm mb-0">
+                      ${btnPrev}
+                      <li class="page-item disabled">
+                        <span class="page-link border-0 text-dark fw-bold bg-transparent">
+                          <span class="d-none d-md-inline">Página </span>${page} de ${totalPages}
+                        </span>
+                      </li>
+                      ${btnNext}
+                    </ul>
+                  </nav>`;
+            }
+            if (typeof window.inicializarTooltipsGlobais === 'function') window.inicializarTooltipsGlobais();
+        } catch (error) {
+            tbody.innerHTML = `<tr><td colspan="6" class="text-center py-5 text-danger"><i class="bi bi-exclamation-triangle fs-1"></i><p class="mt-2">Falha ao carregar dados do histórico.</p></td></tr>`;
+        }
+    };
+
+    window.carregarDados(abaAtiva, 1);
+});
+</script>
 {% endblock %}

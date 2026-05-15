@@ -1,13 +1,24 @@
-from flask import Blueprint, render_template, request, redirect, url_for, flash, abort
-from flask_login import login_required, current_user
+"""
+=============================================================================
+  Rotas de Gerenciamento de Solicitações de Materiais
+  Arquivo: materiais.py 
+=============================================================================
+"""
+
+from flask import Blueprint, abort, flash, jsonify, redirect, render_template, request, url_for
+from flask_login import current_user, login_required
+from sqlalchemy import asc, desc, literal_column, or_, select, union_all
 from sqlalchemy.orm import joinedload
 
+from core.exceptions import RegraNegocioError
 from core.extensions import db
-from core.models import SolicitacaoMaterial, ComentarioChamado, Usuario
-from core.utils import usuario_ativo_requerido, perfil_requerido, log_auditoria
+from core.models import Auditoria, ComentarioChamado, PerfilUsuario, SolicitacaoMaterial, Usuario
 from core.services import GestaoService
+from core.utils import perfil_requerido, usuario_ativo_requerido
+
 
 materiais_bp = Blueprint('materiais', __name__)
+
 
 @materiais_bp.route('/materiais')
 @login_required
@@ -15,127 +26,181 @@ materiais_bp = Blueprint('materiais', __name__)
 def lista():
     termo = request.args.get('q', '').strip()
     page = request.args.get('page', 1, type=int)
-    # Proteção contra manipulação de paginação (DoS)
     per_page = min(request.args.get('per_page', 10, type=int), 100)
+    status_filtro = request.args.get('status', '')
+    sort_col = request.args.get('sort', 'data')
+    sort_dir = request.args.get('dir', 'desc')
 
-    # Otimização N+1 com joinedload
-    query = SolicitacaoMaterial.query.options(
+    stmt = select(SolicitacaoMaterial).options(
         joinedload(SolicitacaoMaterial.solicitante),
         joinedload(SolicitacaoMaterial.responsavel)
     ).filter_by(ativo=True)
 
     if current_user.is_usuario:
-        query = query.filter_by(id_usuario=current_user.id)
-
+        stmt = stmt.filter_by(id_usuario=current_user.id)
+        
     if termo:
-        busca = f"%{termo}%"
-        query = query.join(Usuario, SolicitacaoMaterial.id_usuario == Usuario.id).filter(
-            db.or_(SolicitacaoMaterial.nome_material.ilike(busca), Usuario.nome.ilike(busca))
-        )
+        stmt = stmt.where(or_(
+            SolicitacaoMaterial.nome_material.ilike(f"%{termo}%"), 
+            SolicitacaoMaterial.justificativa.ilike(f"%{termo}%")
+        ))
+        
+    if status_filtro:
+        stmt = stmt.filter_by(status=status_filtro)
 
-    lista_paginada = query.order_by(SolicitacaoMaterial.data_criacao.desc()).paginate(
-        page=page, per_page=per_page, error_out=False
-    )
+    ordem = desc if sort_dir == 'desc' else asc
+    coluna = getattr(SolicitacaoMaterial, 'data_criacao' if sort_col == 'data' else sort_col, SolicitacaoMaterial.data_criacao)
+    stmt = stmt.order_by(ordem(coluna))
+
+    paginacao = db.paginate(stmt, page=page, per_page=per_page, error_out=False)
     
-    return render_template('materiais.html', lista=lista_paginada, termo=termo, per_page=per_page)
+    return render_template('materiais.html', lista=paginacao)
+
+
+@materiais_bp.route('/materiais/<int:mid>')
+@login_required
+@usuario_ativo_requerido
+def detalhe(mid: int):
+    sol = db.one_or_404(
+        select(SolicitacaoMaterial)
+        .options(joinedload(SolicitacaoMaterial.solicitante), joinedload(SolicitacaoMaterial.responsavel))
+        .filter_by(id=mid, ativo=True)
+    )
+
+    if current_user.is_usuario and sol.id_usuario != current_user.id:
+        abort(403)
+
+    stmt_auditoria = select(
+        literal_column("'auditoria'").label('tipo'),
+        Auditoria.data_hora.label('data'),
+        Usuario.nome.label('ator_nome'),
+        Usuario.perfil.label('ator_perfil'),
+        Auditoria.acao.label('info')
+    ).select_from(Auditoria).join(Usuario, Auditoria.id_ator == Usuario.id).filter(
+        Auditoria.tabela_afetada == 'solicitacao_material', Auditoria.registro_id == mid
+    )
+
+    stmt_comentarios = select(
+        literal_column("'comentario'").label('tipo'),
+        ComentarioChamado.data_hora.label('data'),
+        Usuario.nome.label('ator_nome'),
+        Usuario.perfil.label('ator_perfil'),
+        ComentarioChamado.texto.label('info')
+    ).select_from(ComentarioChamado).join(Usuario, ComentarioChamado.id_usuario == Usuario.id).filter(
+        ComentarioChamado.id_material == mid
+    )
+
+    stmt_uniao = union_all(stmt_auditoria, stmt_comentarios).order_by(desc('data'))
+    timeline = db.session.execute(stmt_uniao).mappings().all()
+
+    return render_template('detalhe_material.html', sol=sol, timeline=timeline)
+
 
 @materiais_bp.route('/materiais/novo', methods=['GET', 'POST'])
 @login_required
 @usuario_ativo_requerido
 def novo():
     if request.method == 'POST':
-        nome = request.form.get('nome_material', '').strip()
-        qtd = request.form.get('quantidade', '').strip()
-        just = request.form.get('justificativa', '').strip()
+        dados = {
+            'nome_material': request.form.get('nome_material', '').strip(),
+            'quantidade': int(request.form.get('quantidade', 1)),
+            'justificativa': request.form.get('justificativa', '').strip()
+        }
+        GestaoService.criar_material(current_user.id, dados)
+        flash("Solicitação criada.", "success")
+        return redirect(url_for('materiais.lista'))
 
-        if not all([nome, qtd, just]):
-            flash('Preencha todos os campos.', 'warning')
-        else:
-            try:
-                nova = SolicitacaoMaterial(
-                    id_usuario=current_user.id,
-                    nome_material=nome,
-                    quantidade=int(qtd),
-                    justificativa=just
-                )
-                db.session.add(nova)
-                db.session.flush()
-                log_auditoria('CRIOU', 'solicitacao_material', nova.id, {'material': nome, 'qtd': qtd})
-                db.session.commit()
-                flash('Solicitação enviada!', 'success')
-                return redirect(url_for('materiais.lista'))
-            except Exception as e:
-                db.session.rollback()
-                flash('Erro interno ao guardar a solicitação.', 'danger')
-                
     return render_template('form_material.html')
 
-@materiais_bp.route('/materiais/<int:mid>')
-@login_required
-@usuario_ativo_requerido
-def detalhe(mid: int):
-    sol = SolicitacaoMaterial.query.filter_by(id=mid, ativo=True).first_or_404()
-    
-    if current_user.is_usuario and sol.id_usuario != current_user.id:
-        abort(403)
-        
-    # Correção: Consulta agora usa as novas chaves estrangeiras (id_material)
-    comentarios = ComentarioChamado.query.filter_by(id_material=mid).order_by(ComentarioChamado.data_hora).all()
-    return render_template('detalhe_material.html', sol=sol, timeline=comentarios)
 
 @materiais_bp.route('/materiais/<int:mid>/editar', methods=['GET', 'POST'])
 @login_required
 @usuario_ativo_requerido
 def editar(mid: int):
-    sol = SolicitacaoMaterial.query.filter_by(id=mid, ativo=True).first_or_404()
-    if sol.status in ['aprovado', 'entregue', 'cancelado']:
-        flash('Solicitações finalizadas não podem ser editadas.', 'warning')
-        return redirect(url_for('materiais.detalhe', mid=mid))
+    sol = db.one_or_404(select(SolicitacaoMaterial).filter_by(id=mid, ativo=True))
     
-    if current_user.is_usuario and (sol.id_usuario != current_user.id or sol.status != 'pendente'):
+    if current_user.is_usuario and sol.id_usuario != current_user.id:
         abort(403)
 
+    if sol.status.value in ['entregue', 'cancelado']:
+        flash("Solicitações finalizadas não podem ser alteradas.", "warning")
+        return redirect(url_for('materiais.detalhe', mid=mid))
+
     if request.method == 'POST':
-        just_edicao = request.form.get('justificativa_edicao', '').strip()
-        if current_user.pode_gerenciar and not just_edicao:
-            flash('Gestores devem informar a justificativa da edição.', 'warning')
+        dados = {
+            'nome_material': request.form.get('nome_material', '').strip(),
+            'quantidade': int(request.form.get('quantidade', 1)),
+            'justificativa': request.form.get('justificativa', '').strip(),
+            'justificativa_edicao': request.form.get('justificativa_edicao', '').strip()
+        }
+        if not dados['justificativa_edicao']:
+            flash("Forneça o motivo da edição.", 'warning')
             return render_template('form_material.html', sol=sol, editando=True)
 
-        try:
-            antes = {'nome': sol.nome_material, 'qtd': sol.quantidade}
-            sol.nome_material = request.form.get('nome_material', sol.nome_material).strip()
-            sol.quantidade = int(request.form.get('quantidade', sol.quantidade))
-            sol.justificativa = request.form.get('justificativa', sol.justificativa).strip()
-
-            log_auditoria('EDITOU', 'solicitacao_material', sol.id, {
-                'antes': antes, 'depois': {'nome': sol.nome_material, 'qtd': sol.quantidade},
-                'justificativa': just_edicao or 'N/A'
-            })
-            db.session.commit()
-            flash('Solicitação atualizada.', 'success')
-            return redirect(url_for('materiais.lista'))
-        except Exception:
-            db.session.rollback()
-            flash('Erro ao atualizar a solicitação.', 'danger')
+        GestaoService.editar_material(sol, dados, current_user.id)
+        flash("Solicitação atualizada com sucesso.", "success")
+        return redirect(url_for('materiais.lista'))
             
     return render_template('form_material.html', sol=sol, editando=True)
 
-@materiais_bp.route('/materiais/<int:mid>/status/<novo_status>')
-@perfil_requerido('administrador', 'gestor')
+
+@materiais_bp.route('/api/materiais/sugestoes')
+@login_required
 @usuario_ativo_requerido
-def alterar_status(mid: int, novo_status: str):
-    sol = SolicitacaoMaterial.query.filter_by(id=mid, ativo=True).first_or_404()
+def api_sugestoes_materiais():
+    termo = request.args.get('q', '').strip()
     
+    if len(termo) < 2:
+        return jsonify([])
+
+    stmt = select(SolicitacaoMaterial.nome_material).filter(
+        SolicitacaoMaterial.ativo == True,
+        SolicitacaoMaterial.nome_material.ilike(f"%{termo}%")
+    ).distinct().limit(10)
+
+    resultados = db.session.scalars(stmt).all()
+    
+    return jsonify(resultados)
+
+
+@materiais_bp.route('/api/materiais/<int:mid>/status', methods=['PATCH'])
+@perfil_requerido(PerfilUsuario.ADMINISTRADOR, PerfilUsuario.GESTOR)
+@usuario_ativo_requerido
+def alterar_status(mid: int):
+    dados = request.get_json()
+    if not dados or 'novo_status' not in dados:
+        return jsonify({'erro': 'Status não fornecido.'}), 400
+
+    sol = db.session.get(SolicitacaoMaterial, mid)
+    if not sol or not sol.ativo:
+        return jsonify({'erro': 'Solicitação não encontrada.'}), 404
+
     try:
-        sucesso = GestaoService.alterar_status_material(sol, novo_status, current_user.id)
-        if sucesso:
-            flash(f'Status atualizado para {novo_status}.', 'success')
-        else:
-            flash('Erro ao atualizar o status.', 'danger')
-    except ValueError:
-        abort(400) # Se alguém tentar forçar um status malicioso na URL
+        GestaoService.alterar_status_material(sol, dados['novo_status'], current_user.id)
+        return jsonify({'mensagem': 'Status atualizado com sucesso.'}), 200
+    except RegraNegocioError as e:
+        return jsonify({'erro': str(e)}), 400
+
+
+@materiais_bp.route('/api/materiais/<int:mid>', methods=['DELETE'])
+@login_required
+@usuario_ativo_requerido
+def excluir(mid: int):
+    sol = db.session.get(SolicitacaoMaterial, mid)
+    if not sol or not sol.ativo:
+        return jsonify({'erro': 'Solicitação não encontrada.'}), 404
         
-    return redirect(url_for('materiais.lista'))
+    if sol.status.value.lower() != 'pendente':
+        return jsonify({'erro': 'Acesso negado. Apenas solicitações pendentes podem ser excluídas.'}), 403
+
+    try:
+        GestaoService.excluir_material(mid, current_user.id)
+        return '', 204
+    except RegraNegocioError as e:
+        return jsonify({'erro': str(e)}), 400
+    except Exception:
+        return jsonify({'erro': 'Erro interno ao tentar remover a solicitação.'}), 500
+
 
 @materiais_bp.route('/materiais/<int:mid>/comentar', methods=['POST'])
 @login_required
@@ -143,29 +208,7 @@ def alterar_status(mid: int, novo_status: str):
 def comentar(mid: int):
     texto = request.form.get('texto', '').strip()
     if texto:
-        sucesso = GestaoService.comentar_material(mid, current_user.id, texto)
-        if sucesso:
-            flash('Comentário adicionado.', 'success')
-        else:
-            flash('Erro ao gravar o comentário.', 'danger')
-            
+        GestaoService.comentar_material(mid, current_user.id, texto)
+        flash("Comentário adicionado.", "success")
+        
     return redirect(url_for('materiais.detalhe', mid=mid))
-
-@materiais_bp.route('/materiais/<int:mid>/excluir', methods=['POST'])
-@login_required
-@usuario_ativo_requerido
-def excluir(mid: int):
-    sol = SolicitacaoMaterial.query.filter_by(id=mid, ativo=True).first_or_404()
-    if current_user.is_usuario and (sol.id_usuario != current_user.id or sol.status != 'pendente'):
-        abort(403)
-        
-    try:
-        sol.ativo = False
-        log_auditoria('EXCLUIU', 'solicitacao_material', sol.id, {'material': sol.nome_material})
-        db.session.commit()
-        flash('Solicitação removida.', 'danger')
-    except Exception:
-        db.session.rollback()
-        flash('Erro ao tentar remover a solicitação.', 'danger')
-        
-    return redirect(url_for('materiais.lista'))

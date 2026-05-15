@@ -1,233 +1,309 @@
 {% extends "base.html" %}
+{% from "components.html" import render_status_pill, render_avatar %}
 
 {% block title %}Dashboard — IPVP{% endblock %}
 
+{% block header_content %}
+  {% if current_user.pode_gerenciar %}
+    <h1 class="h3 mb-1 page-title" style="color: #0B4A2B; font-weight: 700;">Painel de Controle</h1>
+    <p class="mb-0" style="color: #6B7280; font-size: 0.9rem; margin-top: 8px;">Resumo das atividades e solicitações prioritárias da instituição.</p>
+  {% else %}
+    <h1 class="h3 mb-1 page-title" style="color: #0B4A2B; font-weight: 700;">Minhas Demandas</h1>
+    <p class="mb-0" style="color: #6B7280; font-size: 0.9rem; margin-top: 8px;">Acompanhe o status das suas solicitações em tempo real.</p>
+  {% endif %}
+{% endblock %}
+
 {% block content %}
 <div class="container-fluid p-0">
-
-  <div class="d-flex justify-content-between align-items-end mb-4 pb-2">
-    <div>
-      <h1 class="h3 mb-1" style="font-weight: 800; color: var(--sgd-navy);">
-        <i class="bi bi-grid-1x2 me-2" style="color: var(--sgd-blue);"></i>Painel de Controle
-      </h1>
-      <p class="text-muted mb-0" style="font-size: 0.9rem;">Visão geral das demandas e chamados ativos.</p>
-    </div>
-  </div>
-
-  {% if current_user.pode_gerenciar %}
   
-  <div class="kpi-grid mb-4">
-    
-    <div class="kpi-card">
-      <div class="kpi-icon" style="background-color: rgba(217, 119, 6, 0.1); color: #d97706;"><i class="bi bi-box-seam"></i></div>
-      <div>
-        <div class="kpi-value" style="color: #d97706;">{{ kpi.mat_pendente }}</div>
-        <div class="kpi-label">Aguardando Aprovação</div>
-      </div>
-    </div>
+  {% if current_user.pode_gerenciar %}
 
-    <div class="kpi-card">
-      <div class="kpi-icon" style="background-color: rgba(220, 38, 38, 0.1); color: #dc2626;"><i class="bi bi-tools"></i></div>
-      <div>
-        <div class="kpi-value" style="color: #dc2626;">{{ kpi.man_aberto }}</div>
-        <div class="kpi-label">Chamados Abertos</div>
+  {% if alertas_urgentes %}
+    {% for alerta in alertas_urgentes %}
+    <div class="alert-banner">
+      <div class="d-flex align-items-center gap-3">
+        <i class="bi bi-exclamation-octagon-fill fs-3" style="color: #DC2626;"></i>
+        <div>
+          <h4 class="mb-1" style="font-size: 1rem; font-weight: 700; color: #991B1B;">{{ alerta.titulo }}</h4>
+          <p class="mb-0" style="font-size: 0.875rem; color: #B91C1C; opacity: 0.9;">{{ alerta.texto }}</p>
+        </div>
       </div>
+      <a href="{{ alerta.link }}" class="btn-resolve shadow-sm">Resolver agora <i class="bi bi-arrow-right ms-1"></i></a>
     </div>
-
-    <div class="kpi-card border-danger-subtle" style="border-width: 2px;">
-      <div class="kpi-icon" style="background-color: rgba(225, 29, 72, 0.1); color: #e11d48;"><i class="bi bi-exclamation-octagon"></i></div>
-      <div>
-        <div class="kpi-value" style="color: #e11d48;">{{ kpi.man_alta }}</div>
-        <div class="kpi-label text-danger">Alta Urgência</div>
-      </div>
-    </div>
-
-    <div class="kpi-card">
-      <div class="kpi-icon" style="background-color: rgba(14, 165, 233, 0.1); color: #0ea5e9;"><i class="bi bi-arrow-repeat"></i></div>
-      <div>
-        <div class="kpi-value" style="color: #0ea5e9;">{{ kpi.man_andamento }}</div>
-        <div class="kpi-label">Em Andamento</div>
-      </div>
-    </div>
-
-    <div class="kpi-card">
-      <div class="kpi-icon" style="background-color: rgba(16, 185, 129, 0.1); color: #10b981;"><i class="bi bi-truck"></i></div>
-      <div>
-        <div class="kpi-value" style="color: #10b981;">{{ kpi.mat_aprovado }}</div>
-        <div class="kpi-label">Aprovados / Compras</div>
-      </div>
-    </div>
-
-    <div class="kpi-card">
-      <div class="kpi-icon" style="background-color: rgba(124, 58, 237, 0.1); color: #7c3aed;"><i class="bi bi-check2-all"></i></div>
-      <div>
-        <div class="kpi-value" style="color: #7c3aed;">{{ kpi.concluidos_mes }}</div>
-        <div class="kpi-label">Concluídos (Mês)</div>
-      </div>
-    </div>
-
-  </div>
+    {% endfor %}
   {% endif %}
 
-  <div class="row g-4">
+  <div class="kpi-overview-wrapper mb-5">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2 class="dash-section-title mb-0">Visão Geral de Demandas</h2>
+        <button id="btnClearFilter" class="btn btn-sm btn-link text-decoration-none d-none" onclick="filtrarPainel('tudo')">
+            <i class="bi bi-x-circle me-1"></i> Limpar Filtro
+        </button>
+    </div>
     
-    <div class="col-12 col-xl-6">
-      <div class="card-corp h-100">
-        <div class="card-header-corp d-flex justify-content-between align-items-center">
-          <h6 class="mb-0"><i class="bi bi-box-seam me-2" style="color: var(--sgd-blue);"></i>Materiais Recentes</h6>
-          <a href="{{ url_for('materiais.lista') }}" class="btn btn-sm btn-link text-decoration-none" style="font-size: 0.8rem; font-weight: 600;">Ver todos</a>
-        </div>
-        
-        <div class="table-responsive px-4 pb-4 pt-2">
-          <table class="table-corp mb-0" style="table-layout: fixed; width: 100%;">
-            <thead>
-              <tr>
-                <th style="width: 50%;" class="text-start">Material</th>
-                <th style="width: 25%;" class="text-start">Solicitante</th>
-                <th style="width: 25%;" class="text-center">Status</th>
-              </tr>
-            </thead>
-            <tbody>
-              {% set mat_lista = ultimas_mat if current_user.pode_gerenciar else minhas_mat %}
-              {% for s in mat_lista %}
-              <tr style="vertical-align: middle;">
-                
-                <td class="text-start" style="width: 100%; max-width: 200px;">
-                  <a href="{{ url_for('materiais.detalhe', mid=s.id) }}" class="d-block text-truncate fw-bold text-decoration-none" style="color: var(--sgd-navy); font-size: 0.9rem;" title="{{ s.nome_material }}">
-                    {{ s.nome_material }}
-                  </a>
-                  <span class="d-block mt-1" style="font-size: 0.75rem; color: #9ca3af;">{{ s.data_criacao.strftime('%d/%m/%Y') }}</span>
-                </td>
-                
-                <td class="text-start" style="font-size: 0.85rem; color: #4b5563;">
-                  <span class="d-block text-truncate" style="max-width: 120px;" title="{{ s.solicitante.nome }}">
-                    {{ s.solicitante.nome.split()[0] | smart_title }}
-                  </span>
-                </td>
-                <td class="text-center">
-                  <span class="status-pill status-{{ s.status }}">{{ s.status | replace('_', ' ') }}</span>
-                </td>
-              </tr>
-              {% else %}
-              <tr><td colspan="3" class="text-center text-muted py-4"><i class="bi bi-inbox fs-4 d-block mb-2"></i>Nenhum pedido ativo.</td></tr>
-              {% endfor %}
-            </tbody>
-          </table>
-        </div>
+    <div class="kpi-cards-row" id="kpi-cards-container">
+      <div class="kpi-mini-card border-alta" onclick="filtrarPainel('critico')" title="Filtrar manutenções críticas">
+        <div class="kpi-num color-alta">{{ kpi.man_alta }}</div>
+        <div class="kpi-label">Manutenções Críticas</div>
+      </div>
+      <div class="kpi-mini-card border-pendente" onclick="filtrarPainel('pendente')" title="Filtrar materiais pendentes">
+        <div class="kpi-num color-pendente">{{ kpi.mat_pendente }}</div>
+        <div class="kpi-label">Materiais Pendentes</div>
+      </div>
+      <div class="kpi-mini-card border-andamento" onclick="filtrarPainel('andamento')" title="Filtrar itens em andamento">
+        <div class="kpi-num color-andamento">{{ kpi.man_andamento }}</div>
+        <div class="kpi-label">Demandas em Andamento</div>
       </div>
     </div>
-
-    <div class="col-12 col-xl-6">
-      <div class="card-corp h-100">
-        <div class="card-header-corp d-flex justify-content-between align-items-center">
-          <h6 class="mb-0"><i class="bi bi-tools me-2" style="color: var(--sgd-blue);"></i>Manutenções Recentes</h6>
-          <a href="{{ url_for('manutencao.lista') }}" class="btn btn-sm btn-link text-decoration-none" style="font-size: 0.8rem; font-weight: 600;">Ver todos</a>
-        </div>
-        
-        <div class="table-responsive px-4 pb-4 pt-2">
-          <table class="table-corp mb-0" style="table-layout: fixed; width: 100%;">
-            <thead>
-              <tr>
-                <th style="width: 50%;" class="text-start">Local / Setor</th>
-                <th style="width: 20%;" class="text-center">Urgência</th>
-                <th style="width: 30%;" class="text-center">Status</th>
-              </tr>
-            </thead>
-            <tbody>
-              {% set man_lista = ultimas_man if current_user.pode_gerenciar else minhas_man %}
-              {% for m in man_lista %}
-              <tr style="vertical-align: middle;">
-                
-                <td class="text-start" style="width: 100%; max-width: 200px;">
-                  <a href="{{ url_for('manutencao.detalhe', cid=m.id) }}" class="d-block text-truncate fw-bold text-decoration-none" style="color: var(--sgd-navy); font-size: 0.9rem;" title="{{ m.local }}">
-                    {{ m.local }}
-                  </a>
-                  <span class="d-block mt-1" style="font-size: 0.75rem; color: #9ca3af;">{{ m.data_criacao.strftime('%d/%m/%Y') }}</span>
-                </td>
-                
-                <td class="text-center">
-                  {% if m.urgencia == 'alta' %}
-                    <span style="background: #fee2e2; color: #dc2626; padding: 3px 8px; border-radius: 50px; font-size: 0.65rem; font-weight: 700; text-transform: uppercase;">Alta</span>
-                  {% elif m.urgencia == 'media' %}
-                    <span style="background: #fef3c7; color: #d97706; padding: 3px 8px; border-radius: 50px; font-size: 0.65rem; font-weight: 700; text-transform: uppercase;">Média</span>
-                  {% else %}
-                    <span style="background: #dcfce7; color: #16a34a; padding: 3px 8px; border-radius: 50px; font-size: 0.65rem; font-weight: 700; text-transform: uppercase;">Baixa</span>
-                  {% endif %}
-                </td>
-                <td class="text-center">
-                  <span class="status-pill status-{{ m.status }}">{{ m.status | replace('_', ' ') }}</span>
-                </td>
-              </tr>
-              {% else %}
-              <tr><td colspan="3" class="text-center text-muted py-4"><i class="bi bi-inbox fs-4 d-block mb-2"></i>Nenhum chamado ativo.</td></tr>
-              {% endfor %}
-            </tbody>
-          </table>
-        </div>
-      </div>
-    </div>
-
   </div>
 
+  <div class="dashboard-tabelas-grid mb-4">
+    <div id="card-materiais">
+      <div class="card-padrao h-100">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+          <h3 class="dash-section-title fs-5 mb-0">Materiais Recentes</h3>
+          <a href="{{ url_for('materiais.lista') }}" class="btn-ver-todos mb-0">Ver Todos <i class="bi bi-arrow-right"></i></a>
+        </div>
+        <table class="table-corp table-layout-fixed w-100 mb-0" id="table-materiais">
+          <thead>
+            <tr>
+              <th class="text-start" style="width: 60%;">MATERIAL</th>
+              <th class="text-center" style="width: 15%;">QTD</th>
+              <th class="text-center" style="width: 25%;">STATUS</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for s in ultimas_mat %}
+            {% set status_val = s.status.value if s.status.value is defined else s.status %}
+            <tr class="data-row {% if status_val|lower == 'cancelado' %}row-inativa{% endif %}" onclick="window.location='{{ url_for('materiais.detalhe', mid=s.id) }}'" data-status="{{ status_val | lower }}">
+              <td class="text-start pe-3">
+                <span class="item-link d-block text-truncate" title="{{ s.nome_material }}">{{ s.nome_material }}</span>
+                <span class="item-meta d-flex align-items-center gap-1 mt-1">
+                  <a href="{{ url_for('admin.detalhe_usuario', uid=s.solicitante.id) }}" class="d-inline-flex align-items-center gap-1 text-decoration-none" onclick="event.stopPropagation();">
+                    {{ render_avatar(s.solicitante.nome, s.solicitante.perfil.value, 'xs', 'shadow-sm') }}
+                    <span class="text-muted small hover-underline">{{ s.solicitante.nome.split()[0] | smart_title }}</span>
+                  </a>
+                  <span class="mx-1">•</span> {{ s.data_criacao.strftime('%d/%m') }}
+                </span>
+              </td>
+              <td class="text-center fw-bold text-dark">{{ s.quantidade }}</td>
+              <td class="text-center">
+                {{ render_status_pill(status_val) }}
+              </td>
+            </tr>
+            {% else %}
+            <tr class="data-row"><td colspan="3" class="text-center py-4 text-muted">Nenhum pedido de material recente.</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div id="card-manutencao">
+      <div class="card-padrao h-100">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+          <h3 class="dash-section-title fs-5 mb-0">Manutenções Recentes</h3>
+          <a href="{{ url_for('manutencao.lista') }}" class="btn-ver-todos mb-0">Ver Todos <i class="bi bi-arrow-right"></i></a>
+        </div>
+        <table class="table-corp table-layout-fixed w-100 mb-0" id="table-manutencao">
+          <thead>
+            <tr>
+              <th class="text-start" style="width: 50%;">LOCAL</th>
+              <th class="text-center" style="width: 25%;">URGÊNCIA</th>
+              <th class="text-center" style="width: 25%;">STATUS</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for m in ultimas_man %}
+            {% set status_val = m.status.value if m.status.value is defined else m.status %}
+            {% set urg_val = m.urgencia.value if m.urgencia.value is defined else m.urgencia %}
+            <tr class="data-row {% if status_val|lower == 'cancelado' %}row-inativa{% endif %}" onclick="window.location='{{ url_for('manutencao.detalhe', cid=m.id) }}'" data-status="{{ status_val | lower }}" data-urgency="{{ urg_val | lower }}">
+              <td class="text-start pe-3">
+                <span class="item-link d-block text-truncate" title="{{ m.local }}">{{ m.local }}</span>
+                <span class="item-meta d-flex align-items-center gap-1 mt-1">
+                  <a href="{{ url_for('admin.detalhe_usuario', uid=m.solicitante.id) }}" class="d-inline-flex align-items-center gap-1 text-decoration-none" onclick="event.stopPropagation();">
+                    {{ render_avatar(m.solicitante.nome, m.solicitante.perfil.value, 'xs', 'shadow-sm') }}
+                    <span class="text-muted small hover-underline">{{ m.solicitante.nome.split()[0] | smart_title }}</span>
+                  </a>
+                  <span class="mx-1">•</span> {{ m.data_criacao.strftime('%d/%m') }}
+                </span>
+              </td>
+              <td class="text-center">{{ render_status_pill(urg_val) }}</td>
+              <td class="text-center">{{ render_status_pill(status_val) }}</td>
+            </tr>
+            {% else %}
+            <tr class="data-row"><td colspan="3" class="text-center py-4 text-muted">Nenhuma manutenção recente.</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  {% else %}
+  
+  <div class="row mb-4">
+    <div class="col-12">
+      <div class="p-4 rounded-4 d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-4 shadow-sm" style="background: linear-gradient(135deg, var(--color-primary-800), var(--color-primary-900)); color: white;">
+        <div>
+          <h2 class="h4 fw-bold mb-1">Olá, {{ current_user.nome.split()[0] }}!</h2>
+          <p class="mb-0 text-white-50 small">O que você precisa solicitar para o seu setor hoje?</p>
+        </div>
+        <div class="d-flex flex-wrap gap-2">
+          <a href="{{ url_for('materiais.novo') }}" class="btn btn-light fw-bold shadow-sm d-flex align-items-center gap-2" style="color: var(--color-primary-900);">
+            <i class="bi bi-box-seam"></i> Pedir Material
+          </a>
+          <a href="{{ url_for('manutencao.novo') }}" class="btn btn-outline-light fw-bold d-flex align-items-center gap-2" style="border-color: rgba(255,255,255,0.3);">
+            <i class="bi bi-tools"></i> Reportar Problema
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="mb-4">
+    <h3 class="dash-section-title fs-6 mb-3 text-muted fw-bold text-uppercase" style="letter-spacing: 0.5px;">Resumo e Avisos</h3>
+    <div class="row g-3">
+      <div class="col-md-4 col-sm-6">
+        <div class="p-3 border rounded-3 bg-white d-flex align-items-center gap-3 shadow-sm h-100" style="border-color: var(--color-neutral-200);">
+          <div class="rounded-circle d-flex justify-content-center align-items-center flex-shrink-0" style="width: 48px; height: 48px; background-color: var(--color-primary-50); color: var(--color-primary-800);">
+            <i class="bi bi-wrench-adjustable fs-4"></i>
+          </div>
+          <div>
+            <span class="fs-4 fw-bold d-block lh-1 text-dark mb-1">{{ minhas_man|length }}</span>
+            <span class="text-muted small fw-medium">Manutenções Abertas</span>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-4 col-sm-6">
+        <div class="p-3 border rounded-3 bg-white d-flex align-items-center gap-3 shadow-sm h-100" style="border-color: var(--color-neutral-200);">
+          <div class="rounded-circle d-flex justify-content-center align-items-center flex-shrink-0" style="width: 48px; height: 48px; background-color: #FFFBEB; color: #D97706;">
+            <i class="bi bi-box2 fs-4"></i>
+          </div>
+          <div>
+            <span class="fs-4 fw-bold d-block lh-1 text-dark mb-1">{{ minhas_mat|length }}</span>
+            <span class="text-muted small fw-medium">Materiais Pedidos</span>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-4 col-12">
+        <div class="p-3 border rounded-3 shadow-sm h-100 d-flex flex-column justify-content-center" style="background-color: #F8FAFC; border-color: #E2E8F0;">
+          <div class="d-flex align-items-center gap-2 mb-1">
+            <i class="bi bi-info-circle-fill text-primary-600" style="font-size: 1.1rem;"></i>
+            <h6 class="fw-bold mb-0 text-dark" style="font-size: 0.875rem;">Informativo</h6>
+          </div>
+          <p class="text-muted mb-0 lh-sm" style="font-size: 0.75rem;">O tempo médio de resposta atual é de <strong>24 a 48 horas úteis</strong>.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="dashboard-tabelas-grid mb-4">
+    <div id="card-meus-pedidos">
+      <div class="card-padrao h-100">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+          <h3 class="dash-section-title fs-5 mb-0">Materiais Recentes</h3>
+          <a href="{{ url_for('materiais.lista') }}" class="btn-ver-todos mb-0">Ver Histórico <i class="bi bi-arrow-right"></i></a>
+        </div>
+        <table class="table-corp table-layout-fixed w-100 mb-0">
+          <thead>
+            <tr>
+              <th class="text-start" style="width: 70%;">MATERIAL SOLICITADO</th>
+              <th class="text-center" style="width: 30%;">STATUS</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for s in minhas_mat %}
+            {% set status_val = s.status.value if s.status.value is defined else s.status %}
+            <tr class="data-row {% if status_val|lower == 'cancelado' %}row-inativa{% endif %}" onclick="window.location='{{ url_for('materiais.detalhe', mid=s.id) }}'">
+              <td class="text-start pe-3">
+                <span class="item-link d-block text-truncate" title="{{ s.nome_material }}">{{ s.nome_material }}</span>
+                <span class="item-meta d-block mt-1"><i class="bi bi-calendar-event me-1 opacity-50"></i> {{ s.data_criacao.strftime('%d/%m/%Y') }}</span>
+              </td>
+              <td class="text-center">{{ render_status_pill(status_val) }}</td>
+            </tr>
+            {% else %}
+            <tr class="data-row"><td colspan="2" class="text-center py-5 text-muted"><i class="bi bi-box-seam fs-3 d-block mb-2 opacity-50"></i>Nenhum pedido de material.</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+    
+    <div id="card-minhas-manutencoes">
+      <div class="card-padrao h-100">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+          <h3 class="dash-section-title fs-5 mb-0">Manutenções Recentes</h3>
+          <a href="{{ url_for('manutencao.lista') }}" class="btn-ver-todos mb-0">Ver Histórico <i class="bi bi-arrow-right"></i></a>
+        </div>
+        <table class="table-corp table-layout-fixed w-100 mb-0">
+          <thead>
+            <tr>
+              <th class="text-start" style="width: 70%;">LOCAL DO INCIDENTE</th>
+              <th class="text-center" style="width: 30%;">STATUS</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for m in minhas_man %}
+            {% set status_val = m.status.value if m.status.value is defined else m.status %}
+            <tr class="data-row {% if status_val|lower == 'cancelado' %}row-inativa{% endif %}" onclick="window.location='{{ url_for('manutencao.detalhe', cid=m.id) }}'">
+              <td class="text-start pe-3">
+                <span class="item-link d-block text-truncate" title="{{ m.local }}">{{ m.local }}</span>
+                <span class="item-meta d-block mt-1"><i class="bi bi-calendar-event me-1 opacity-50"></i> {{ m.data_criacao.strftime('%d/%m/%Y') }}</span>
+              </td>
+              <td class="text-center">{{ render_status_pill(status_val) }}</td>
+            </tr>
+            {% else %}
+            <tr class="data-row"><td colspan="2" class="text-center py-5 text-muted"><i class="bi bi-tools fs-3 d-block mb-2 opacity-50"></i>Nenhuma manutenção.</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+  {% endif %}
 </div>
 
-<style>
-  .kpi-grid {
-    display: grid;
-    grid-template-columns: repeat(1, 1fr);
-    gap: 16px;
-  }
-  
-  @media (min-width: 768px) {
-    .kpi-grid { grid-template-columns: repeat(2, 1fr); }
-  }
-  
-  @media (min-width: 1200px) {
-    .kpi-grid { grid-template-columns: repeat(3, 1fr); gap: 20px; }
-  }
+<script>
+(function() {
+    window.filtrarPainel = function(categoria) {
+        const cardsContainer = document.getElementById('kpi-cards-container');
+        if (!cardsContainer) return; 
+        
+        const rowsMan = document.querySelectorAll('#table-manutencao tbody tr.data-row');
+        const rowsMat = document.querySelectorAll('#table-materiais tbody tr.data-row');
+        const cards = document.querySelectorAll('.kpi-mini-card');
+        const btnClear = document.getElementById('btnClearFilter');
 
-  /* Cartões com fundo branco e design limpo */
-  .kpi-card {
-    background-color: #ffffff;
-    border-radius: 12px;
-    padding: 20px;
-    display: flex;
-    align-items: center;
-    gap: 16px;
-    box-shadow: 0 4px 10px rgba(0,0,0,0.03);
-    transition: transform 0.2s ease, box-shadow 0.2s ease;
-    border: 1px solid #f3f4f6;
-  }
+        cards.forEach(c => c.classList.remove('active-filter'));
+        if (btnClear) btnClear.classList.add('d-none');
 
-  .kpi-card:hover {
-    transform: translateY(-3px);
-    box-shadow: 0 10px 20px rgba(0,0,0,0.06);
-    border-color: #e5e7eb;
-  }
+        const toggleRow = (row, show) => { row.style.display = show ? '' : 'none'; return show; };
+        let visibleMan = 0; let visibleMat = 0;
 
-  .kpi-card .kpi-icon {
-    width: 54px; 
-    height: 54px; 
-    border-radius: 14px;
-    display: flex; 
-    align-items: center; 
-    justify-content: center; 
-    font-size: 1.6rem;
-  }
-
-  .kpi-card .kpi-value {
-    font-size: 1.9rem;
-    font-weight: 800;
-    line-height: 1.1;
-    margin-bottom: 4px;
-  }
-
-  .kpi-card .kpi-label {
-    font-size: 0.85rem;
-    font-weight: 600;
-    color: #6b7280; /* Texto do subtítulo neutro, a cor fica apenas no número */
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-  }
-</style>
+        if (categoria === 'critico') {
+            rowsMan.forEach(r => { if(toggleRow(r, r.dataset.urgency === 'alta')) visibleMan++; });
+            rowsMat.forEach(r => toggleRow(r, false));
+            document.querySelector('.border-alta').classList.add('active-filter');
+            if (btnClear) btnClear.classList.remove('d-none');
+        } 
+        else if (categoria === 'pendente') {
+            rowsMan.forEach(r => toggleRow(r, false));
+            rowsMat.forEach(r => { if(toggleRow(r, r.dataset.status === 'pendente')) visibleMat++; });
+            document.querySelector('.border-pendente').classList.add('active-filter');
+            if (btnClear) btnClear.classList.remove('d-none');
+        } 
+        else if (categoria === 'andamento') {
+            rowsMan.forEach(r => { if(toggleRow(r, r.dataset.status === 'em_andamento')) visibleMan++; });
+            rowsMat.forEach(r => { if(toggleRow(r, r.dataset.status === 'aprovado')) visibleMat++; });
+            document.querySelector('.border-andamento').classList.add('active-filter');
+            if (btnClear) btnClear.classList.remove('d-none');
+        } 
+        else {
+            rowsMan.forEach(r => { toggleRow(r, true); });
+            rowsMat.forEach(r => { toggleRow(r, true); });
+        }
+    };
+})();
+</script>
 {% endblock %}

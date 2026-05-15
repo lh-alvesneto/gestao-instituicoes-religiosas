@@ -1,159 +1,310 @@
 {% extends "base.html" %}
+{% from "components.html" import render_button %}
 
-{% block title %}{% if editando %}Editar Chamado{% else %}Novo Chamado de Manutenção{% endif %} — IPVP{% endblock %}
+{% block title %}{% if editando %}Editar Chamado — IPVP{% else %}Novo Chamado — IPVP{% endif %}{% endblock %}
+
+{% block header_content %}
+  {% set back_url = url_for('manutencao.lista') %}
+  {% if request.args.get('origem') == 'historico' %}
+      {% set back_url = url_for('dashboard.historico', aba='manutencoes') %}
+  {% elif request.args.get('origem') == 'perfil' %}
+      {% set back_url = url_for('auth.perfil') %}
+  {% elif request.args.get('origem') == 'usuario' %}
+      {% set back_url = url_for('admin.detalhe_usuario', uid=request.args.get('uid')) %}
+  {% endif %}
+
+  <div class="d-flex flex-column">
+    <div class="d-flex align-items-start gap-3">
+      <a href="{{ back_url }}" class="btn-back flex-shrink-0" style="margin-top: 2px;" title="Voltar">
+        <i class="bi bi-arrow-left"></i>
+      </a>
+      <h1 class="h3 mb-0 page-title fw-bold text-primary-800 lh-sm">
+        {% if editando %}Editar Chamado de Manutenção{% else %}Abrir Chamado de Manutenção{% endif %}
+      </h1>
+    </div>
+    <p class="mb-0 text-muted small mt-1 ms-5">
+      Relate o problema estrutural ou de equipamentos para a equipe responsável.
+    </p>
+  </div>
+{% endblock %}
 
 {% block content %}
 <div class="container-fluid p-0">
-
-  <div class="mb-4">
-    <a href="{{ url_for('manutencao.lista') }}" class="text-decoration-none mb-2 d-inline-block" style="color: #6b7280; font-size: 0.85rem; font-weight: 600;">
-      <i class="bi bi-arrow-left me-1"></i> Voltar para Manutenção
-    </a>
-    <h1 class="h3 mb-0" style="font-weight: 800; color: var(--sgd-navy);">
-      <i class="bi {% if editando %}bi-pencil-square{% else %}bi-tools{% endif %} me-2" style="color: var(--sgd-blue);"></i>
-      {% if editando %}Editar Chamado{% else %}Novo Chamado de Manutenção{% endif %}
-    </h1>
-  </div>
-
   <div class="row">
-    <div class="col-12 col-xl-6 col-lg-8"> 
+    <div class="col-12 col-xl-8 mx-auto">
       
-      <div class="card-corp">
-        <div class="card-header-corp d-flex align-items-center gap-2">
-          <i class="bi {% if editando %}bi-pencil{% else %}bi-exclamation-circle{% endif %} text-muted"></i>
-          <h6 class="mb-0">{% if editando %}Atualize os detalhes da ocorrência{% else %}Detalhes da Ocorrência{% endif %}</h6>
-        </div>
-        
-        <div class="p-4">
-         <form method="POST" action="{{ url_for('manutencao.editar', cid=chamado.id) if editando else url_for('manutencao.novo') }}" enctype="multipart/form-data">
-          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>  
-            <div class="row mb-4">
-              <div class="col-12 mb-4">
-                <label for="local" class="form-label-corp">Local / Setor <span class="text-danger">*</span></label>
-                <input type="text" class="form-control input-corp" id="local" name="local" 
-                       placeholder="Ex: Templo Principal, Cozinha..." 
-                       value="{{ chamado.local if editando else '' }}" required autofocus>
-              </div>
-              
-              <div class="col-12">
-                <label class="form-label-corp d-block">Urgência <span class="text-danger">*</span></label>
-                <div class="d-flex gap-2">
-                  
-                  {% set urg = chamado.urgencia if editando else 'media' %}
-                  
-                  <label for="urg_baixa" class="chip-label">
-                    <input type="radio" name="urgencia" id="urg_baixa" value="baixa" class="chip-input" {% if urg == 'baixa' %}checked{% endif %}>
-                    <span class="chip-btn baixa">Baixa</span>
-                  </label>
+      <div class="card-padrao p-4 p-xl-5">
+        <form id="mainForm" method="POST" enctype="multipart/form-data" action="{% if editando %}{{ url_for('manutencao.editar', cid=chamado.id) }}{% else %}{{ url_for('manutencao.novo') }}{% endif %}">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
 
-                  <label for="urg_media" class="chip-label">
-                    <input type="radio" name="urgencia" id="urg_media" value="media" class="chip-input" {% if urg == 'media' %}checked{% endif %}>
-                    <span class="chip-btn media">Média</span>
-                  </label>
-
-                  <label for="urg_alta" class="chip-label">
-                    <input type="radio" name="urgencia" id="urg_alta" value="alta" class="chip-input" {% if urg == 'alta' %}checked{% endif %}>
-                    <span class="chip-btn alta">Alta</span>
-                  </label>
-
-                </div>
-              </div>
+          <div class="mb-4 position-relative" id="containerLocal">
+            <div class="d-flex justify-content-between align-items-baseline mb-2">
+                <label for="local" class="form-label fw-semibold text-neutral-600 mb-0">Local do incidente (setor/sala) <span class="text-danger"> *</span></label>
+                <span id="counter-local" class="text-neutral-400 small fw-normal">0/150</span>
             </div>
             
-            <div class="mb-4">
-              <label for="descricao" class="form-label-corp">Descrição do Problema <span class="text-danger">*</span></label>
-              <textarea class="form-control input-corp" id="descricao" name="descricao" 
-                        rows="4" placeholder="Descreva detalhadamente o que precisa de reparo..." required>{{ chamado.descricao if editando else '' }}</textarea>
-            </div>
+            <input type="text" class="form-control form-input shadow-none" id="local" name="local" 
+                   value="{{ chamado.local if editando else '' }}" required maxlength="150" data-maxlength="150"
+                   placeholder="Ex: Sala 03 do Edifício Principal" autocomplete="off">
+            
+            <div id="loadingIcon" class="spinner-border spinner-border-sm text-secondary position-absolute d-none" style="right: 18px; top: 43px;" role="status"></div>
+            <div id="sugestoesBox" class="autocomplete-box"></div>
+          </div>
 
-            <div class="mb-4">
-              <label class="form-label-corp d-block">{% if editando %}Anexar Novas Fotos (Opcional){% else %}Anexar Fotos (Opcional){% endif %}</label>
-              
-              <label for="imagens" class="upload-zone">
-                <div class="upload-content">
-                  <i class="bi bi-cloud-arrow-up text-muted"></i>
-                  <span class="upload-title">Clique para selecionar fotos</span>
-                  <span class="upload-subtitle">Ou arraste e solte os arquivos aqui</span>
-                </div>
-              </label>
-              
-              <input type="file" class="d-none" id="imagens" name="imagens" accept="image/*" multiple>
-              
-              <div id="file-list" class="mt-3 d-flex flex-wrap gap-2"></div>
-              <div class="form-text mt-2" style="font-size: 0.75rem;">
-                <i class="bi bi-info-circle me-1"></i> Máximo de 3 fotos (até 5MB cada).
-              </div>
-            </div>
-
-            {% if editando and current_user.pode_gerenciar %}
-            <div class="mb-4 p-3 rounded" style="background-color: #fef2f2; border: 1px solid #fca5a5;">
-              <label for="justificativa_edicao" class="form-label-corp text-danger" style="font-weight: 700;">Motivo da Edição (Auditoria) <span class="text-danger">*</span></label>
-              <input type="text" class="form-control input-corp" id="justificativa_edicao" name="justificativa_edicao" 
-                     placeholder="Ex: Ajuste de urgência, correção de local..." required>
-            </div>
-            {% endif %}
-
-            <div class="d-flex justify-content-end gap-3 mt-4 pt-4 border-top">
-              <a href="{{ url_for('manutencao.lista') }}" class="btn btn-light" style="font-weight: 600; font-size: 0.9rem; padding: 10px 20px; color: #4b5563; border-color: #d1d5db;">
-                Cancelar
-              </a>
-              <button type="submit" class="btn-corp-primary d-flex align-items-center gap-2" style="font-size: 0.9rem; padding: 10px 20px; border: none; box-shadow: none;">
-                <i class="bi {% if editando %}bi-check-lg{% else %}bi-check-lg{% endif %}"></i> 
-                {% if editando %}Salvar Alterações{% else %}Abrir Chamado{% endif %}
-              </button>
+          <div class="mb-4">
+            <div class="d-flex justify-content-between align-items-baseline mb-2">
+                <label for="descricao" class="form-label fw-semibold text-neutral-600 mb-0">Descrição do problema <span class="text-danger"> *</span></label>
+                <span id="counter-descricao" class="text-neutral-400 small fw-normal">0/500</span>
             </div>
             
-          </form>
-        </div>
+            <textarea class="form-control form-input shadow-none" id="descricao" name="descricao" rows="4" required maxlength="500" data-maxlength="500" placeholder="Detalhe o máximo possível o que está acontecendo..." style="resize: vertical;">{{ chamado.descricao if editando else '' }}</textarea>
+          </div>
+
+          <div class="mb-4">
+            <label class="form-label fw-semibold text-neutral-600 mb-2">Nível de urgência <span class="text-danger"> *</span></label>
+            
+            {% set urg = chamado.urgencia.value if editando else '' %}
+            
+            <div class="d-flex gap-3 w-100">
+               <div class="radio-card-urgencia">
+                 <input type="radio" name="urgencia" id="urg_baixa" value="baixa" {% if urg == 'baixa' %}checked{% endif %} required>
+                 <label for="urg_baixa">Baixa</label>
+               </div>
+               <div class="radio-card-urgencia">
+                 <input type="radio" name="urgencia" id="urg_media" value="media" {% if urg == 'media' %}checked{% endif %} required>
+                 <label for="urg_media">Média</label>
+               </div>
+               <div class="radio-card-urgencia">
+                 <input type="radio" name="urgencia" id="urg_alta" value="alta" {% if urg == 'alta' %}checked{% endif %} required>
+                 <label for="urg_alta">Alta</label>
+               </div>
+            </div>
+          </div>
+
+          {% if not editando %}
+          <div class="mb-4">
+            <label class="form-label fw-semibold text-neutral-600 mb-2">Anexar fotos (opcional)</label>
+            <div id="drop-zone" class="p-4 text-center border rounded-3 bg-neutral-50" style="border: 2px dashed var(--color-neutral-300) !important; cursor: pointer; transition: all 0.2s;">
+                <i class="bi bi-cloud-arrow-up fs-1 text-neutral-400"></i>
+                <p class="mt-2 mb-1 fw-medium text-neutral-600">Arraste as fotos para cá ou clique para selecionar</p>
+                <p class="text-muted mb-0 small">Formatos: JPG, PNG, WEBP (Máx 4 fotos, totalizando até 10MB)</p>
+                <input type="file" id="imagens" name="imagens" multiple class="d-none" accept="image/png, image/jpeg, image/webp">
+            </div>
+            <div id="preview-container" class="d-flex flex-wrap mt-3"></div>
+          </div>
+          {% endif %}
+
+          {% if editando %}
+          <div class="mb-4 p-4 rounded-3 bg-danger-subtle border border-danger-subtle">
+            <div class="d-flex justify-content-between align-items-baseline mb-2">
+                <label for="justificativa_edicao" class="form-label text-danger fw-semibold mb-0">
+                  <i class="bi bi-shield-lock me-1"></i> Motivo da alteração <span class="text-danger"> *</span>
+                </label>
+                <span id="counter-justificativa_edicao" class="text-danger small fw-normal">0/200</span>
+            </div>
+            <input type="text" class="form-control form-input shadow-none border-danger" id="justificativa_edicao" name="justificativa_edicao" required maxlength="200" data-maxlength="200" placeholder="Por que você está editando este chamado?">
+          </div>
+          {% endif %}
+          
+          <div class="d-flex justify-content-end pt-4 mt-4 border-top" style="border-color: var(--color-neutral-200) !important;">
+            {% set btn_txt = 'Atualizar Chamado' if editando else 'Abrir Chamado' %}
+            {{ render_button(btn_txt, icon='bi-send-check', type='submit', id='btnSubmit', class='btn-acao-solida') }}
+          </div>
+
+        </form>
       </div>
 
     </div>
   </div>
-
 </div>
 
-<style>
-  .chip-label { cursor: pointer; margin: 0; }
-  .chip-input { display: none; }
-  .chip-btn {
-    display: inline-block; padding: 6px 14px; border-radius: 50px; font-size: 0.75rem;
-    font-weight: 700; text-transform: uppercase; background: #f3f4f6; color: #6b7280;
-    border: 2px solid transparent; transition: all 0.2s ease;
-  }
-  .chip-btn:hover { background: #e5e7eb; }
-  .chip-input:checked + .chip-btn.baixa { background: #dcfce7; color: #16a34a; border-color: #16a34a; }
-  .chip-input:checked + .chip-btn.media { background: #fef3c7; color: #d97706; border-color: #d97706; }
-  .chip-input:checked + .chip-btn.alta  { background: #fee2e2; color: #dc2626; border-color: #dc2626; }
-  .upload-zone {
-    display: block; width: 100%; padding: 2rem; border: 2px dashed #d1d5db; border-radius: 12px;
-    background: #f9fafb; cursor: pointer; transition: all 0.2s ease;
-  }
-  .upload-zone:hover { border-color: var(--sgd-light); background: #f0fdf4; }
-  .upload-content { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; }
-  .upload-content i { font-size: 2.2rem; }
-  .upload-title { font-weight: 700; color: var(--sgd-navy); font-size: 0.95rem; }
-  .upload-subtitle { color: #6b7280; font-size: 0.8rem; }
-  .file-badge {
-    background: #ffffff; border: 1px solid #d1d5db; color: #374151; padding: 6px 12px;
-    border-radius: 8px; font-size: 0.8rem; font-weight: 600; display: flex; align-items: center;
-    gap: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.02);
-  }
-</style>
+<div class="modal fade" id="modalAlertaUpload" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content border-0 shadow-lg" style="border-radius: var(--radius-lg);">
+      <div class="modal-header border-0 pb-0 mt-2 mx-2">
+        <h5 class="modal-title fw-bold text-danger"><i class="bi bi-exclamation-triangle me-2"></i>Atenção</h5>
+        <button type="button" class="btn-close shadow-none" data-bs-dismiss="modal" aria-label="Fechar"></button>
+      </div>
+      <div class="modal-body py-3 px-4">
+        <p class="text-secondary mb-0 fw-medium" id="textoAlertaUpload"></p>
+      </div>
+      <div class="modal-footer border-0 pt-0 pb-3 px-4 d-flex justify-content-end">
+        <button type="button" class="btn btn-light fw-medium shadow-sm" data-bs-dismiss="modal">Entendi</button>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
 
+{% block scripts %}
 <script>
-  document.addEventListener('DOMContentLoaded', function () {
-    const fileInput = document.getElementById('imagens');
-    const fileList = document.getElementById('file-list');
+document.addEventListener("turbo:load", () => {
+  const inputLocal = document.getElementById('local');
+  const sugestoesBox = document.getElementById('sugestoesBox');
+  const loadingIcon = document.getElementById('loadingIcon');
+  let debounceAjax;
 
-    fileInput.addEventListener('change', function() {
-      fileList.innerHTML = '';
-      Array.from(this.files).forEach(file => {
-        const badge = document.createElement('div');
-        badge.className = 'file-badge';
-        badge.innerHTML = `<i class="bi bi-image" style="color: var(--sgd-light);"></i> ${file.name}`;
-        fileList.appendChild(badge);
+  if (inputLocal) {
+      inputLocal.addEventListener('input', function() {
+          const val = this.value.trim();
+          clearTimeout(debounceAjax);
+          if (val.length < 2) { sugestoesBox.classList.remove('show'); return; }
+          loadingIcon.classList.remove('d-none');
+
+          debounceAjax = setTimeout(async () => {
+              try {
+                  const response = await fetch(`/api/manutencao/sugestoes_local?q=${encodeURIComponent(val)}`);
+                  if (response.ok) {
+                      const itens = await response.json();
+                      sugestoesBox.innerHTML = ''; 
+                      if (itens.length > 0) {
+                          itens.forEach(item => {
+                              const div = document.createElement('div');
+                              div.className = 'autocomplete-item text-truncate';
+                              div.innerHTML = `<i class="bi bi-geo-alt me-2 opacity-50"></i> ${item}`;
+                              div.onclick = function() {
+                                  inputLocal.value = item;
+                                  sugestoesBox.classList.remove('show');
+                                  inputLocal.dispatchEvent(new Event('input')); 
+                              };
+                              sugestoesBox.appendChild(div);
+                          });
+                          sugestoesBox.classList.add('show');
+                      } else { sugestoesBox.classList.remove('show'); }
+                  }
+              } catch (e) { console.error("Falha ao buscar locais", e); } 
+              finally { loadingIcon.classList.add('d-none'); }
+          }, 300);
       });
-    });
-  });
+
+      document.addEventListener('click', function(e) {
+          const container = document.getElementById('containerLocal');
+          if (container && !container.contains(e.target) && sugestoesBox) {
+              sugestoesBox.classList.remove('show');
+          }
+      });
+  }
+
+  const mainForm = document.getElementById('mainForm');
+  if (mainForm) {
+      mainForm.addEventListener('submit', function(e) {
+          if (this.checkValidity()) {
+              const btn = document.getElementById('btnSubmit');
+              btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>Processando...';
+              btn.classList.add('disabled');
+              btn.style.pointerEvents = 'none';
+          }
+      });
+  }
+
+  const dropZone = document.getElementById('drop-zone');
+  const fileInput = document.getElementById('imagens');
+  const previewContainer = document.getElementById('preview-container');
+
+  if(dropZone && fileInput && previewContainer) {
+      const dataTransfer = new DataTransfer();
+      const MAX_FILES = 4;
+      const MAX_TOTAL_SIZE = 10 * 1024 * 1024;
+      
+      let modalAvisoUpload;
+      const textoAlertaUpload = document.getElementById('textoAlertaUpload');
+      if (document.getElementById('modalAlertaUpload')) {
+          modalAvisoUpload = new bootstrap.Modal(document.getElementById('modalAlertaUpload'));
+      }
+
+      function mostrarErro(mensagem) {
+          if (modalAvisoUpload && textoAlertaUpload) {
+              textoAlertaUpload.textContent = mensagem;
+              modalAvisoUpload.show();
+          } else {
+              alert(mensagem);
+          }
+      }
+
+      dropZone.addEventListener('click', () => fileInput.click());
+      dropZone.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.style.borderColor = 'var(--color-primary-800)'; dropZone.style.backgroundColor = 'var(--color-primary-50)'; });
+      dropZone.addEventListener('dragleave', (e) => { e.preventDefault(); dropZone.style.borderColor = 'var(--color-neutral-300)'; dropZone.style.backgroundColor = 'var(--color-neutral-50)'; });
+      dropZone.addEventListener('drop', (e) => {
+          e.preventDefault();
+          dropZone.style.borderColor = 'var(--color-neutral-300)'; dropZone.style.backgroundColor = 'var(--color-neutral-50)';
+          if (e.dataTransfer.files.length) adicionarArquivos(e.dataTransfer.files);
+      });
+      
+      fileInput.addEventListener('change', function() { adicionarArquivos(this.files); });
+
+      function adicionarArquivos(novosArquivos) {
+          let currentSize = Array.from(dataTransfer.files).reduce((sum, f) => sum + f.size, 0);
+          let currentCount = dataTransfer.files.length;
+
+          let arquivosValidos = Array.from(novosArquivos).filter(file => {
+              const isDuplicado = Array.from(dataTransfer.files).some(f => f.name === file.name && f.size === file.size);
+              return !isDuplicado && file.type.startsWith('image/');
+          });
+
+          if (arquivosValidos.length === 0) return;
+
+          let novoTamanhoSoma = arquivosValidos.reduce((sum, f) => sum + f.size, 0);
+
+          if (currentCount + arquivosValidos.length > MAX_FILES) {
+              mostrarErro(`Você está tentando anexar um total de ${currentCount + arquivosValidos.length} fotos, mas o limite máximo é de ${MAX_FILES} fotos por chamado. Nenhuma das novas fotos foi adicionada.`);
+              fileInput.files = dataTransfer.files;
+              return;
+          }
+
+          if (currentSize + novoTamanhoSoma > MAX_TOTAL_SIZE) {
+              mostrarErro('As fotos selecionadas são muito pesadas e ultrapassam o limite de 10MB do servidor. Tente enviar imagens com menor resolução. Nenhuma das novas fotos foi adicionada.');
+              fileInput.files = dataTransfer.files;
+              return;
+          }
+
+          arquivosValidos.forEach(file => dataTransfer.items.add(file));
+          fileInput.files = dataTransfer.files;
+          updatePreviews();
+      }
+
+      function updatePreviews() {
+          previewContainer.innerHTML = '';
+          Array.from(fileInput.files).forEach((file, index) => {
+              const reader = new FileReader();
+              reader.onload = (e) => {
+                  const wrapper = document.createElement('div');
+                  wrapper.className = 'position-relative d-inline-block mt-2 me-3';
+                  wrapper.style.width = '80px';
+                  wrapper.style.aspectRatio = '1/1';
+                  
+                  const img = document.createElement('img');
+                  img.src = e.target.result; 
+                  img.className = 'rounded-3 border border-neutral-200';
+                  img.style.width = '100%';
+                  img.style.height = '100%';
+                  img.style.objectFit = 'cover';
+                  
+                  const btnRemover = document.createElement('button');
+                  btnRemover.type = 'button';
+                  btnRemover.className = 'btn btn-danger btn-sm position-absolute d-flex align-items-center justify-content-center shadow-sm p-0';
+                  btnRemover.style.top = '-8px';
+                  btnRemover.style.right = '-8px';
+                  btnRemover.style.width = '24px';
+                  btnRemover.style.height = '24px';
+                  btnRemover.style.borderRadius = '50%';
+                  btnRemover.style.zIndex = '10';
+                  btnRemover.innerHTML = '<i class="bi bi-x fs-6 lh-1"></i>';
+                  
+                  btnRemover.onclick = (ev) => {
+                      ev.stopPropagation(); 
+                      dataTransfer.items.remove(index); 
+                      fileInput.files = dataTransfer.files; 
+                      updatePreviews(); 
+                  };
+
+                  wrapper.appendChild(img);
+                  wrapper.appendChild(btnRemover);
+                  previewContainer.appendChild(wrapper);
+              }
+              reader.readAsDataURL(file); 
+          });
+      }
+  }
+});
 </script>
 {% endblock %}

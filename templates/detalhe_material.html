@@ -1,185 +1,270 @@
 {% extends "base.html" %}
+{% from "components.html" import render_status_pill, render_avatar %}
 
-{% block title %}Detalhes da Solicitação #{{ sol.id }} — IPVP{% endblock %}
+{% block title %}Solicitação #{{ sol.id }} — IPVP{% endblock %}
+
+{% block header_content %}
+  {% set back_url = url_for('materiais.lista') %}
+  {% set back_label = 'Materiais' %}
+  {% if request.args.get('origem') == 'historico' %}
+      {% set back_url = url_for('dashboard.historico', aba='materiais') %}
+      {% set back_label = 'Histórico' %}
+  {% elif request.args.get('origem') == 'perfil' %}
+      {% set back_url = url_for('auth.perfil') %}
+      {% set back_label = 'Meu Perfil' %}
+  {% elif request.args.get('origem') == 'usuario' %}
+      {% set back_url = url_for('admin.detalhe_usuario', uid=request.args.get('uid')) %}
+      {% set back_label = 'Perfil do Usuário' %}
+  {% endif %}
+
+  <div class="d-flex flex-column w-100">
+    <nav aria-label="breadcrumb" class="mb-3">
+      <ol class="breadcrumb mb-0 small">
+        <li class="breadcrumb-item"><a href="{{ url_for('dashboard.index') }}" class="text-decoration-none text-muted">Painel</a></li>
+        <li class="breadcrumb-item">
+          <a href="{{ back_url }}" class="text-decoration-none text-muted">{{ back_label }}</a>
+        </li>
+        <li class="breadcrumb-item active fw-semibold text-dark" aria-current="page">Pedido #{{ sol.id }}</li>
+      </ol>
+    </nav>
+
+    <div class="d-flex align-items-start gap-3 mb-4">
+      <a href="{{ back_url }}" class="btn-back flex-shrink-0" title="Voltar" aria-label="Voltar">
+        <i class="bi bi-arrow-left"></i>
+      </a>
+      <div>
+        <h1 class="h3 mb-1 page-title fw-bold text-primary-800">Detalhes da Solicitação</h1>
+        <p class="mb-0 text-muted small mt-1">Consulte ou atualize as informações deste pedido de material.</p>
+      </div>
+    </div>
+  </div>
+{% endblock %}
 
 {% block content %}
 <div class="container-fluid p-0">
-
-  <nav aria-label="breadcrumb" class="mb-3">
-    <ol class="breadcrumb mb-0" style="font-size: 0.85rem; font-weight: 500;">
-      <li class="breadcrumb-item"><a href="{{ url_for('dashboard.index') }}" class="text-decoration-none text-muted"><i class="bi bi-house-door me-1"></i>Painel</a></li>
-      <li class="breadcrumb-item"><a href="{{ url_for('materiais.lista') }}" class="text-decoration-none text-muted">Materiais</a></li>
-      <li class="breadcrumb-item active text-dark" aria-current="page">Solicitação #{{ sol.id }}</li>
-    </ol>
-  </nav>
-
-  <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-3">
-    <h1 class="h3 mb-0" style="font-weight: 800; color: var(--sgd-navy);">
-      <i class="bi bi-box-seam me-2" style="color: var(--sgd-blue);"></i>Detalhes da Solicitação #{{ sol.id }}
-    </h1>
-    
-    <div class="d-flex gap-2">
-      {% if sol.status == 'pendente' %}
-        {% if current_user.is_usuario and sol.id_usuario == current_user.id or current_user.pode_gerenciar %}
-          <a href="{{ url_for('materiais.editar', mid=sol.id) }}" class="btn btn-light border d-flex align-items-center gap-2" style="font-weight: 600; font-size: 0.85rem; color: #4b5563;">
-            <i class="bi bi-pencil"></i> Editar
-          </a>
-        {% endif %}
+  <div class="row">
+    <div class="col-12 col-xl-10 mx-auto">
+      
+      <div class="card-padrao mb-5">
         
-        {% if current_user.pode_gerenciar %}
-          <a href="{{ url_for('materiais.alterar_status', mid=sol.id, novo_status='aprovado') }}" class="btn btn-success d-flex align-items-center gap-2 shadow-sm" style="font-weight: 600; font-size: 0.85rem;">
-            <i class="bi bi-check2-circle"></i> Aprovar Compra
-          </a>
-        {% endif %}
-      {% endif %}
-    </div>
-  </div>
-
-  <div class="row g-4">
-    
-    <div class="col-12 col-xl-4 col-lg-5">
-      <div class="card-corp h-100">
-        <div class="card-header-corp d-flex align-items-center gap-2">
-          <i class="bi bi-info-circle text-muted"></i>
-          <h6 class="mb-0">Informações da Solicitação</h6>
-        </div>
-        
-        <div class="p-4">
-          <div class="d-flex align-items-center border-bottom pb-3 mb-3">
-            <span class="text-muted fw-medium" style="width: 130px; font-size: 0.85rem; flex-shrink: 0;">Status</span>
-            <span class="status-pill status-{{ sol.status }} ms-auto">{{ sol.status | replace('_', ' ') }}</span>
+        <div class="d-flex justify-content-between align-items-start mb-4 pb-4 border-bottom flex-wrap gap-3">
+          <div class="w-100" style="max-width: 65%;">
+            <span class="label-readonly mb-1">Material solicitado</span>
+            <h2 class="fw-bold text-dark mb-2 text-break fs-3">{{ sol.nome_material }}</h2>
+            <div class="d-flex align-items-center gap-2 text-muted flex-wrap small">
+              
+              {% if sol.solicitante %}
+                <a href="{{ url_for('admin.detalhe_usuario', uid=sol.solicitante.id) }}" class="d-flex align-items-center gap-2 text-decoration-none" onclick="event.stopPropagation();">
+                  {{ render_avatar(sol.solicitante.nome, sol.solicitante.perfil.value, 'xs', 'shadow-sm') }} 
+                  <span class="text-muted hover-underline fw-medium">{{ sol.solicitante.nome }}</span>
+                </a>
+              {% else %}
+                <span class="d-flex align-items-center gap-1"><i class="bi bi-person text-muted"></i> Desconhecido</span>
+              {% endif %}
+              
+              <i class="bi bi-dot d-none d-sm-inline"></i>
+              <span><i class="bi bi-calendar-event"></i> {{ sol.data_criacao.strftime('%d/%m/%Y às %H:%M') }}</span>
+            </div>
           </div>
-
-          <div class="d-flex align-items-center border-bottom pb-3 mb-3">
-            <span class="text-muted fw-medium" style="width: 130px; font-size: 0.85rem; flex-shrink: 0;">Material</span>
-            <span class="fw-bold text-dark text-truncate" title="{{ sol.nome_material }}" data-bs-toggle="tooltip" style="flex: 1; min-width: 0;">{{ sol.nome_material }}</span>
-          </div>
-
-          <div class="d-flex align-items-center border-bottom pb-3 mb-3">
-            <span class="text-muted fw-medium" style="width: 130px; font-size: 0.85rem; flex-shrink: 0;">Quantidade</span>
-            <span class="fw-bold" style="color: #4b5563;">{{ sol.quantidade }} un.</span>
-          </div>
-
-          <div class="d-flex align-items-center border-bottom pb-3 mb-3">
-            <span class="text-muted fw-medium" style="width: 130px; font-size: 0.85rem; flex-shrink: 0;">Solicitante</span>
-            <span class="fw-bold text-truncate" style="color: #4b5563; flex: 1; min-width: 0;" title="{{ sol.solicitante.nome }}">{{ sol.solicitante.nome | smart_title }}</span>
-          </div>
-
-          <div class="d-flex align-items-center pb-3 mb-3">
-            <span class="text-muted fw-medium" style="width: 130px; font-size: 0.85rem; flex-shrink: 0;">Data do Pedido</span>
-            <span class="fw-bold" style="color: #4b5563;">{{ sol.data_criacao.strftime('%d/%m/%Y às %H:%M') }}</span>
-          </div>
-
-          <div class="mt-2 p-3 bg-light rounded" style="border: 1px solid #e5e7eb;">
-            <span class="d-block text-muted fw-bold mb-1" style="font-size: 0.75rem; text-transform: uppercase;">Justificativa:</span>
-            <span class="text-break" style="font-size: 0.85rem; color: #4b5563; line-height: 1.5;">{{ sol.justificativa }}</span>
+          
+          <div class="text-end">
+            <span class="label-readonly mb-2">Status atual</span>
+            {{ render_status_pill(sol.status.value, class='fs-6 shadow-sm') }}
           </div>
         </div>
-      </div>
-    </div>
 
-    <div class="col-12 col-xl-8 col-lg-7">
-      <div class="card-corp h-100 d-flex flex-column" style="position: relative;">
-        
-        <div class="card-header-corp d-flex align-items-center gap-2">
-          <i class="bi bi-chat-left-text text-muted"></i>
-          <h6 class="mb-0">Acompanhamento e Histórico</h6>
+        <div class="row g-4 mb-5 d-flex align-items-stretch">
+          <div class="col-md-8">
+            <label class="label-readonly">Justificativa da necessidade</label>
+            <div class="box-readonly">
+              <p class="text-dark mb-0 text-break fw-medium" style="line-height: 1.6; white-space: pre-wrap;">{{ sol.justificativa }}</p>
+            </div>
+          </div>
+          <div class="col-md-4">
+            <label class="label-readonly">Quantidade solicitada</label>
+            <div class="box-readonly d-flex flex-row justify-content-center align-items-center gap-2">
+              <span class="fw-bold text-dark display-6 lh-1 mb-0">{{ sol.quantidade }}</span>
+              <span class="text-muted fw-medium fs-6 mt-2">unidades</span>
+            </div>
+          </div>
         </div>
-
-        <div class="p-4 flex-grow-1" style="background-color: #f9fafb; overflow-y: auto; max-height: 60vh; border-bottom: 1px solid #e5e7eb;">
-          {% if timeline %}
-            <div class="d-flex flex-column gap-3">
-              {% for item in timeline %}
-                
-                {% if item.acao is defined %}
-                  <div class="d-flex justify-content-center my-2">
-                    <span class="badge bg-white text-secondary border shadow-sm px-3 py-2 d-flex align-items-center gap-2" style="font-size: 0.75rem; font-weight: 500; border-radius: 20px;">
-                      <i class="bi bi-robot text-muted"></i>
-                      <span>
-                        <strong>{{ item.ator.nome.split()[0] if item.ator else 'Sistema' }}</strong> 
-                        {{ item.acao|lower }} a solicitação.
-                      </span>
-                      <span class="text-muted fw-normal ms-1">{{ item.data_hora.strftime('%d/%m %H:%M') }}</span>
-                    </span>
-                  </div>
-
-                {% elif item.texto is defined %}
-                  {% set is_me = (item.id_usuario == current_user.id) %}
-                  <div class="p-3 rounded shadow-sm border" style="border-color: {% if is_me %}#bbf7d0{% else %}#e5e7eb{% endif %}; background-color: {% if is_me %}#f0fdf4{% else %}#ffffff{% endif %};">
-                    <div class="d-flex justify-content-between align-items-center mb-2">
-                      <strong style="color: var(--sgd-navy); font-size: 0.9rem;">
-                        <i class="bi bi-person-circle text-muted me-1"></i> 
-                        {% if is_me %}Você{% else %}{{ item.autor.nome.split()[0] | smart_title }}{% endif %}
-                        
-                        {% if item.autor.perfil == 'administrador' %}
-                          <span class="badge ms-1" style="background-color: var(--sgd-navy); color: #fff; font-size: 0.65rem;">Admin</span>
-                        {% elif item.autor.perfil == 'gestor' %}
-                          <span class="badge ms-1" style="background-color: #fef3c7; color: #d97706; font-size: 0.65rem;">Gestor</span>
-                        {% endif %}
-                      </strong>
-                      <span class="text-muted" style="font-size: 0.75rem;">{{ item.data_hora.strftime('%d/%m/%Y %H:%M') }}</span>
-                    </div>
-                    
-                    <div class="text-break" style="font-size: 0.85rem; color: #4b5563; line-height: 1.5;">
-                      {{ item.texto }}
-                    </div>
-                    
-                    {% if item.caminho_anexo %}
-                    <div class="mt-2 pt-2 border-top" style="border-color: rgba(0,0,0,0.05) !important;">
-                      <a href="{{ url_for('manutencao.serve_upload', filename=item.caminho_anexo) }}" target="_blank" class="d-inline-flex align-items-center gap-1 text-decoration-none" style="font-size: 0.75rem; color: var(--sgd-blue);">
-                        <i class="bi bi-file-earmark-text"></i> Ver documento anexado
-                      </a>
-                    </div>
-                    {% endif %}
-                  </div>
+        
+        {% if current_user.pode_gerenciar and sol.status.name|lower not in ['entregue', 'cancelado'] %}
+        <div class="bg-neutral-50 p-4 rounded-3 border border-neutral-200 mb-4">
+          <h6 class="fw-bold mb-3 text-neutral-800"><i class="bi bi-sliders me-2 text-muted"></i>Avançar Status do Pedido</h6>
+          
+          <form id="formAtualizarStatus" data-mid="{{ sol.id }}" class="d-flex flex-wrap align-items-center gap-3">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+            <input type="hidden" id="novo_status" value="{{ sol.status.name|lower }}">
+            
+            <div class="dropdown flex-grow-1" style="max-width: 300px;">
+              <button class="btn btn-white border w-100 d-flex justify-content-between align-items-center shadow-none rounded-3 py-2 px-3 bg-white" style="height: 42px;" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                <span id="statusVisor" class="fw-medium text-dark d-flex align-items-center gap-2">
+                  {% if sol.status.name|lower == 'pendente' %}<span class="status-dot dot-pendente"></span> Pendente{% endif %}
+                  {% if sol.status.name|lower == 'aprovado' %}<span class="status-dot dot-aprovado"></span> Aprovado{% endif %}
+                </span>
+                <i class="bi bi-chevron-down text-muted small"></i>
+              </button>
+              
+              <ul class="dropdown-menu w-100 custom-dropdown mt-1 shadow-lg">
+                {% if sol.status.name|lower == 'pendente' %}
+                  <li><a class="dropdown-item custom-dropdown-item fw-medium opt-status d-flex align-items-center gap-2" href="#" data-val="pendente" data-html="<span class='status-dot dot-pendente'></span> Pendente"><span class="status-dot dot-pendente"></span> Pendente</a></li>
                 {% endif %}
-              {% endfor %}
+                {% if sol.status.name|lower in ['pendente', 'aprovado'] %}
+                  <li><a class="dropdown-item custom-dropdown-item fw-medium opt-status d-flex align-items-center gap-2" href="#" data-val="aprovado" data-html="<span class='status-dot dot-aprovado'></span> Aprovado"><span class="status-dot dot-aprovado"></span> Aprovado</a></li>
+                {% endif %}
+                <li><a class="dropdown-item custom-dropdown-item fw-medium opt-status d-flex align-items-center gap-2" href="#" data-val="entregue" data-html="<span class='status-dot dot-entregue'></span> Entregue"><span class="status-dot dot-entregue"></span> Entregue</a></li>
+              </ul>
             </div>
-          {% else %}
-            <div class="text-center text-muted py-5">
-              <i class="bi bi-chat-square-dots fs-1 d-block mb-3" style="opacity: 0.3;"></i>
-              Nenhum registro no histórico.
-            </div>
+            
+            <button type="submit" id="btnSalvarAvanco" class="btn btn-acao-solida rounded-3 border-0 py-2 px-4 d-flex align-items-center gap-2" style="height: 42px;">
+               <i class="bi bi-check2"></i> Salvar Avanço
+            </button>
+          </form>
+        </div>
+        {% endif %}
+
+        <div class="d-flex justify-content-start align-items-center pt-4 mt-2 border-top flex-wrap gap-3">
+          {% if current_user.pode_gerenciar and sol.status.name|lower == 'pendente' %}
+            <button type="button" class="btn btn-outline-destructive py-2 px-3 d-flex align-items-center gap-2 fw-semibold" data-bs-toggle="modal" data-bs-target="#modalExcluir">
+              <i class="bi bi-trash"></i> Excluir
+            </button>
+          {% endif %}
+          
+          {% if current_user.pode_gerenciar and sol.status.name|lower not in ['entregue', 'cancelado'] %}
+            <button type="button" class="btn btn-outline-neutral py-2 px-3 d-flex align-items-center gap-2 fw-semibold" data-bs-toggle="modal" data-bs-target="#modalCancelar">
+              <i class="bi bi-x-octagon"></i> Cancelar Pedido
+            </button>
           {% endif %}
         </div>
 
-        <div class="p-4 bg-white position-sticky bottom-0" style="border-radius: 0 0 12px 12px; z-index: 10;">
-          <form method="POST" action="{{ url_for('materiais.comentar', mid=sol.id) }}" class="d-flex flex-column gap-2" enctype="multipart/form-data">
-           <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
-            <textarea class="form-control input-corp shadow-none mb-2 text-break" name="texto" rows="3" placeholder="Escreva um comentário ou atualização sobre o pedido..." required></textarea>
-            
-            <div class="d-flex justify-content-between align-items-center">
-              
-              <label for="anexo_comentario" class="btn btn-light btn-sm text-muted border mb-0 d-flex align-items-center gap-2" style="cursor: pointer; transition: all 0.2s;">
-                <i class="bi bi-paperclip fs-6"></i> 
-                <span id="nome_arquivo_selecionado">Anexar Arquivo</span>
-                <input type="file" id="anexo_comentario" name="anexo" class="d-none" accept=".jpg,.jpeg,.png,.pdf">
-              </label>
-
-              <button type="submit" class="btn-corp-primary d-flex align-items-center gap-2" style="font-size: 0.85rem; padding: 8px 16px; border: none; box-shadow: none;">
-                <i class="bi bi-send"></i> Enviar
-              </button>
-            </div>
-          </form>
-        </div>
-
       </div>
     </div>
-
   </div>
 </div>
 
+<div class="modal fade" id="modalCancelar" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content rounded-3 border-0 shadow-lg">
+      <div class="modal-header border-0 pb-0">
+        <h5 class="modal-title fw-bold text-danger">Cancelar Solicitação</h5>
+        <button type="button" class="btn-close shadow-none" data-bs-dismiss="modal" aria-label="Fechar"></button>
+      </div>
+      <div class="modal-body py-3">
+        <p class="text-secondary mb-1">Deseja realmente cancelar este pedido?</p>
+        <p class="mb-3 fw-bold text-dark fs-5 text-break">{{ sol.nome_material }}</p>
+      </div>
+      <div class="modal-footer border-0 pt-0 d-flex justify-content-between">
+        <button type="button" class="btn btn-light fw-medium rounded-3" data-bs-dismiss="modal">Manter Pedido</button>
+        <button type="button" class="btn btn-danger px-4 fw-bold rounded-3" id="confirmCancel" data-mid="{{ sol.id }}">Sim, Cancelar</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal fade" id="modalExcluir" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content rounded-3 border-0 shadow-lg">
+      <div class="modal-header border-0 pb-0">
+        <h5 class="modal-title fw-bold text-dark">Excluir Solicitação</h5>
+        <button type="button" class="btn-close shadow-none" data-bs-dismiss="modal" aria-label="Fechar"></button>
+      </div>
+      <div class="modal-body py-3">
+        <p class="text-secondary mb-1">Deseja remover este pedido?</p>
+        <p class="mb-3 fw-bold text-dark fs-5 text-break">{{ sol.nome_material }}</p>
+      </div>
+      <div class="modal-footer border-0 pt-0 d-flex justify-content-between">
+        <button type="button" class="btn btn-light fw-medium rounded-3" data-bs-dismiss="modal">Voltar</button>
+        <button type="button" class="btn btn-dark px-4 fw-bold rounded-3" id="confirmDelete">Excluir Permanentemente</button>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
 <script>
-  document.addEventListener('DOMContentLoaded', function () {
-    var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
-    var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
-      return new bootstrap.Tooltip(tooltipTriggerEl)
+document.addEventListener("turbo:load", () => {
+    const optStatus = document.querySelectorAll('.opt-status');
+    const visor = document.getElementById('statusVisor');
+    const inputOculto = document.getElementById('novo_status');
+    const urlRetorno = "{{ back_url }}";
+    
+    optStatus.forEach(opt => {
+        opt.addEventListener('click', function(e) {
+            e.preventDefault();
+            if(inputOculto) inputOculto.value = this.dataset.val;
+            if(visor) visor.innerHTML = this.dataset.html;
+        });
     });
 
-    document.getElementById('anexo_comentario').addEventListener('change', function() {
-      var nomeArquivo = this.files.length > 0 ? this.files[0].name : 'Anexar Arquivo';
-      document.getElementById('nome_arquivo_selecionado').textContent = nomeArquivo;
-    });
-  });
+    const formStatus = document.getElementById('formAtualizarStatus');
+    if(formStatus) {
+        formStatus.addEventListener('submit', function(e) {
+            e.preventDefault();
+            const btn = document.getElementById('btnSalvarAvanco');
+            if(btn) { btn.disabled = true; btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span> Processando...'; }
+
+            const mid = this.dataset.mid;
+            const novoStatus = document.getElementById('novo_status').value;
+            const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+            
+            fetch(`/api/materiais/${mid}/status`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrfToken },
+                body: JSON.stringify({ novo_status: novoStatus })
+            }).then(async response => {
+                if (response.ok) { window.location.reload(); } 
+                else { 
+                    alert(`Falha ao atualizar status.`); 
+                    if(btn) { btn.disabled = false; btn.innerHTML = '<i class="bi bi-check2 me-1"></i> Salvar Avanço'; }
+                }
+            });
+        });
+    }
+
+    const btnCancel = document.getElementById('confirmCancel');
+    if(btnCancel) {
+        btnCancel.addEventListener('click', function() {
+            this.disabled = true;
+            this.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span> Processando...';
+            const mid = this.dataset.mid;
+            const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+            
+            fetch(`/api/materiais/${mid}/status`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrfToken },
+                body: JSON.stringify({ novo_status: 'cancelado' })
+            }).then(async response => {
+                if (response.ok) { window.location.reload(); } 
+                else { 
+                    alert(`Falha ao cancelar o pedido.`); 
+                    this.disabled = false; this.innerHTML = 'Sim, Cancelar';
+                }
+            });
+        });
+    }
+
+    const btnDelete = document.getElementById('confirmDelete');
+    if(btnDelete) {
+        btnDelete.addEventListener('click', function() {
+            this.disabled = true;
+            this.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span> Processando...';
+            const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+            
+            fetch(`/api/materiais/{{ sol.id if sol else 0 }}`, {
+                method: 'DELETE',
+                headers: { 'X-CSRFToken': csrfToken }
+            }).then(res => {
+                if(res.ok) { 
+                    window.location.href = urlRetorno; 
+                } else { 
+                    alert("Erro ao excluir o material. Verifique as permissões ou status."); 
+                    this.disabled = false; this.innerHTML = 'Excluir Permanentemente';
+                }
+            });
+        });
+    }
+});
 </script>
 {% endblock %}
